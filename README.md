@@ -19,6 +19,9 @@ A GitHub contribution graph themed desk nameplate.
 ### Print the parts and assemble
 
 1. Preview the model files in the `./models/` folder.
+   - Nameplate - vertical part with grid
+   - Insert - the colored dots to insert in the grid
+   - Stand - horizontal part to hold nameplate
 1. Open `.3mf` file or load the `.stl` files into your slicing software.
 1. Print the parts. No special settings are required.
 1. Insert the colored dots into the slots to spell your name or decorate! You can use the [nametag-planner.xlsx file](docs/nametag-planner.xlsx) to make your design.
