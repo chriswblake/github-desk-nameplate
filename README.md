@@ -1,4 +1,4 @@
-# GitHub Desk Nameplate
+# GitHub Contribution Graph Desk Nameplate
 
 ![](models/desk-nameplate-preview.png)
 
