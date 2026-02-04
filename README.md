@@ -1,6 +1,6 @@
 # GitHub Contribution Graph Desk Nameplate
 
-![](models/desk-nameplate-preview.png)
+![](models/desk-nameplate-preview-real.jpg)
 
 A GitHub contribution graph themed desk nameplate.
 
