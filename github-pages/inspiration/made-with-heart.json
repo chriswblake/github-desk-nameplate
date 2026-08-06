@@ -1,0 +1,14 @@
+{
+  "name": "Made with heart",
+  "plate": "#3f0d1b",
+  "logo": "#fecdd3",
+  "grid": [
+    ".................w.............w.w...w.....rr.rr....",
+    ".................w...............w...w....rrrrrrr...",
+    "...wwwww..ww...www..ww...w...w.w.www.www..rrrrrrr...",
+    "...w.w.w....w.w..w.w..w..w...w.w.w...w..w..rrrrr....",
+    "...w.w.w..www.w..w.www...w.w.w.w.w...w..w...rrr.....",
+    "...w.w.w.w..w.w..w.w.....w.w.w.w.w...w..w....r......",
+    "...w.w.w..www..www..www...w.w..w..ww.w..w..........."
+  ]
+}

@@ -36,7 +36,7 @@ body {
 
 .app-header {
   position: relative;
-  padding: 20px 16px 0;
+  padding: 10px 16px 0;
   text-align: center;
 }
 
@@ -44,15 +44,14 @@ body {
   margin: 0;
   font-size: 1.4rem;
   /* Keep the centered title clear of the corner buttons. */
-  padding: 0 44px;
+  padding: 0 78px;
 }
 
 .subtitle {
   margin: 4px 0 0;
   color: var(--muted);
   font-size: 0.9rem;
-  /* Keep the centered subtitle clear of the top-right help button. */
-  padding: 0 40px;
+  padding: 0 78px;
 }
 
 main {
@@ -66,8 +65,8 @@ main {
   display: flex;
   flex-direction: column;
   align-items: center;
-  /* Compact separation between the control groups (palette / settings /
-     word tool); each group keeps its own tighter internal gap. */
+  /* Compact separation between control groups; each group keeps its own
+     tighter internal gap. */
   gap: var(--space-2);
   padding: 4px 0;
   /* Pull up into the stage's shadow padding so controls sit closer to the
@@ -81,17 +80,6 @@ main {
   align-items: center;
   justify-content: center;
   flex-wrap: wrap;
-}
-
-/* Secondary settings: appearance pickers + shift, one coherent band. */
-.toolbar-settings {
-  gap: var(--space-2) var(--space-4);
-}
-
-.settings-shift {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--space-2);
 }
 
 /* −/+ control to enlarge the nameplate; shown on touch devices (any
@@ -183,8 +171,9 @@ main {
   color: var(--muted);
 }
 
-/* Letter-size segmented control */
-.text-size {
+/* Text width and justification segmented controls */
+.text-size,
+.text-align {
   display: inline-flex;
   border: 1px solid var(--border);
   border-radius: 10px;
@@ -192,7 +181,8 @@ main {
   background: var(--panel);
 }
 
-.size-btn {
+.size-btn,
+.align-btn {
   font: inherit;
   font-size: 0.82rem;
   font-weight: 600;
@@ -204,35 +194,165 @@ main {
   min-height: 36px;
 }
 
-.size-btn + .size-btn {
+.size-btn + .size-btn,
+.align-btn + .align-btn {
   border-left: 1px solid var(--border);
 }
 
-.size-btn:hover {
+.size-btn:hover,
+.align-btn:hover {
   color: var(--text);
 }
 
-.size-btn[aria-pressed="true"] {
+.size-btn[aria-pressed="true"],
+.align-btn[aria-pressed="true"] {
   background: var(--accent);
   color: #fff;
 }
 
-.field {
+.align-btn {
+  width: 40px;
+  padding: 7px 10px;
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  font-size: 0.85rem;
-  font-weight: 600;
+  justify-content: center;
 }
 
-.field input[type="color"] {
-  width: 34px;
-  height: 30px;
-  padding: 0;
+.align-btn svg {
+  width: 18px;
+  height: 18px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+}
+
+.color-field {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  color: var(--muted);
+  font-size: 0.72rem;
+  font-weight: 600;
+  line-height: 1;
+}
+
+.color-field input[type="color"] {
+  appearance: none;
+  -webkit-appearance: none;
+  width: 42px;
+  height: 42px;
+  padding: 3px;
   border: 1px solid var(--border);
-  border-radius: 6px;
-  background: none;
+  border-radius: 50%;
+  background: var(--panel);
+  box-shadow:
+    0 1px 2px rgba(31, 35, 40, 0.12),
+    0 3px 8px rgba(31, 35, 40, 0.08);
   cursor: pointer;
+  overflow: hidden;
+  transition:
+    transform 0.16s ease,
+    border-color 0.16s ease,
+    box-shadow 0.16s ease;
+}
+
+.color-field input[type="color"]::-webkit-color-swatch-wrapper {
+  padding: 0;
+}
+
+.color-field input[type="color"]::-webkit-color-swatch {
+  border: none;
+  border-radius: 50%;
+}
+
+.color-field input[type="color"]::-moz-color-swatch {
+  border: none;
+  border-radius: 50%;
+}
+
+.color-field input[type="color"]:hover {
+  transform: translateY(-2px) scale(1.04);
+  border-color: var(--muted);
+  box-shadow:
+    0 2px 4px rgba(31, 35, 40, 0.14),
+    0 6px 14px rgba(31, 35, 40, 0.12);
+}
+
+.color-field input[type="color"]:focus-visible {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow:
+    0 0 0 3px rgba(9, 105, 218, 0.2),
+    0 4px 12px rgba(31, 35, 40, 0.12);
+}
+
+.appearance-controls {
+  position: absolute;
+  top: 10px;
+  right: 14px;
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+}
+
+.header-color-field {
+  font-size: 0.65rem;
+}
+
+.header-color-field input[type="color"] {
+  width: 34px;
+  height: 34px;
+}
+
+.header-reset {
+  width: 34px;
+  height: 34px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 7px;
+  border: 1px solid var(--border);
+  border-radius: 50%;
+  background: var(--panel);
+  color: #cf222e;
+  cursor: pointer;
+}
+
+.header-reset:hover {
+  border-color: #cf222e;
+  background: rgba(207, 34, 46, 0.06);
+}
+
+.header-reset:focus-visible {
+  outline: 3px solid rgba(207, 34, 46, 0.2);
+  outline-offset: 2px;
+}
+
+.header-reset svg {
+  width: 100%;
+  height: 100%;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+@media (max-width: 520px) {
+  .app-header {
+    padding-bottom: 48px;
+  }
+
+  .app-header h1,
+  .subtitle {
+    padding: 0 44px;
+  }
+
+  .appearance-controls {
+    top: 54px;
+  }
 }
 
 .btn {
@@ -264,28 +384,37 @@ main {
   line-height: 1;
 }
 
-.arrange-label {
-  color: var(--muted);
-  font-size: 0.85rem;
-  font-weight: 600;
-}
-
 /* Palette --------------------------------------------------------------- */
 /* Fixed 8-across grid so all swatches stay on one row and never orphan-wrap;
    width is capped so they don't balloon on desktop and centered by the group. */
 .toolbar-colors {
   width: 100%;
+  flex-wrap: nowrap;
 }
 
 .palette {
   display: grid;
-  /* One row that always holds every swatch, however many colors exist. */
-  grid-auto-flow: column;
-  grid-auto-columns: 1fr;
+  grid-template-columns: repeat(auto-fit, minmax(44px, 1fr));
+  align-items: start;
   gap: var(--space-2);
   width: 100%;
-  max-width: 520px;
+  max-width: 680px;
+  min-width: 0;
+  flex: 1 1 auto;
   margin: 0 auto;
+}
+
+.visually-hidden-color {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.swatch-wrap {
+  position: relative;
+  min-width: 0;
 }
 
 .swatch {
@@ -303,6 +432,52 @@ main {
   font-weight: 700;
   transition: transform 0.16s cubic-bezier(0.2, 0.7, 0.2, 1),
     box-shadow 0.16s ease, opacity 0.16s ease, filter 0.16s ease;
+}
+
+.add-color {
+  border-style: dashed;
+  background: var(--panel);
+  color: var(--muted);
+  font-size: 1.6rem;
+  font-weight: 400;
+  padding-bottom: 3px;
+}
+
+.remove-color {
+  position: absolute;
+  top: calc(100% + 5px);
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 4;
+  width: 22px;
+  height: 22px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--border);
+  border-radius: 50%;
+  padding: 0 0 2px;
+  background: var(--panel);
+  color: var(--muted);
+  font: inherit;
+  font-size: 0.9rem;
+  line-height: 1;
+  cursor: pointer;
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transition: opacity 0.16s ease;
+}
+
+.swatch[aria-pressed="true"] + .remove-color {
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+}
+
+.remove-color:hover {
+  border-color: var(--muted);
+  color: var(--text);
 }
 
 /* Recede the unselected swatches so the active one clearly stands out. */
@@ -324,6 +499,17 @@ main {
   box-shadow: 0 10px 22px rgba(0, 0, 0, 0.3);
   border-color: rgba(0, 0, 0, 0.3);
   z-index: 2;
+}
+
+.add-color:not([aria-pressed="true"]) {
+  opacity: 1;
+  filter: none;
+  transform: none;
+}
+
+.add-color:not([aria-pressed="true"]):hover {
+  opacity: 1;
+  transform: translateY(-1px);
 }
 
 .swatch .count {
@@ -352,12 +538,11 @@ main {
 }
 
 /* Info popover ---------------------------------------------------------- */
-/* Help affordance anchored to the top-right corner of the header (a stable,
-   conventional spot) so it stays out of the primary control flow. */
+/* Help sits beside the menu so appearance controls can occupy the top right. */
 .info-wrap {
   position: absolute;
   top: 16px;
-  right: 16px;
+  left: 56px;
   display: inline-flex;
 }
 
@@ -386,7 +571,7 @@ main {
 .info-popover {
   position: absolute;
   top: calc(100% + 8px);
-  right: 0;
+  left: 0;
   width: min(320px, 80vw);
   background: var(--panel);
   border: 1px solid var(--border);
@@ -567,6 +752,92 @@ kbd {
 
 .cell.highlight {
   box-shadow: 0 0 0 2px #fff, 0 0 0 4px var(--accent);
+}
+
+/* Inspiration ---------------------------------------------------------- */
+.inspiration-section {
+  margin: 32px auto 0;
+  padding: 24px 0 8px;
+  border-top: 1px solid var(--border);
+}
+
+.section-heading {
+  text-align: center;
+  margin-bottom: 18px;
+}
+
+.section-heading h2 {
+  margin: 0;
+  font-size: 1.2rem;
+}
+
+.section-heading p {
+  margin: 4px 0 0;
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+.inspiration-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 1fr));
+  gap: 16px;
+}
+
+.inspiration-card {
+  width: 100%;
+  padding: 0;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  cursor: pointer;
+}
+
+.inspiration-card:focus-visible {
+  outline: 3px solid var(--accent);
+  outline-offset: 3px;
+}
+
+.inspiration-preview {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px;
+  border-radius: 8px;
+  background: var(--preview-plate, #000);
+}
+
+.inspiration-logo {
+  width: calc((100% - 6px) * 7 / 59);
+  aspect-ratio: 1;
+  flex: 0 0 auto;
+  background: var(--preview-logo, #fff);
+  -webkit-mask: url("github-mark-white.svg") center / contain no-repeat;
+  mask: url("github-mark-white.svg") center / contain no-repeat;
+}
+
+.inspiration-dot-grid {
+  display: grid;
+  grid-template-rows: repeat(7, auto);
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(0, 1fr);
+  gap: 2px;
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.inspiration-dot {
+  min-width: 0;
+  aspect-ratio: 1;
+  border-radius: 25%;
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.inspiration-status {
+  grid-column: 1 / -1;
+  margin: 0;
+  text-align: center;
+  color: var(--muted);
+  font-size: 0.9rem;
 }
 
 /* Hamburger menu button (top-left of header) --------------------------- */
@@ -813,13 +1084,4 @@ kbd {
 
 .menu-item:hover {
   border-color: var(--muted);
-}
-
-.menu-item-danger {
-  color: #cf222e;
-}
-
-.menu-item-danger:hover {
-  border-color: #cf222e;
-  background: rgba(207, 34, 46, 0.06);
 }

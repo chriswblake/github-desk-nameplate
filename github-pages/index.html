@@ -47,6 +47,41 @@
       </button>
       <h1>Nameplate Designer</h1>
       <p class="subtitle">How much swagger can you earn?</p>
+      <div class="appearance-controls" aria-label="Nameplate controls">
+        <label class="color-field header-color-field">
+          <span>Plate</span>
+          <input
+            type="color"
+            id="plate-color"
+            value="#000000"
+            aria-label="Nameplate color"
+          />
+        </label>
+        <label class="color-field header-color-field">
+          <span>Logo</span>
+          <input
+            type="color"
+            id="logo-color"
+            value="#ffffff"
+            aria-label="Logo color"
+          />
+        </label>
+        <div class="color-field header-color-field">
+          <span>Reset</span>
+          <button
+            type="button"
+            id="clear-all"
+            class="header-reset"
+            aria-label="Clear all dots"
+            title="Clear all dots"
+          >
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M4 4v6h6" />
+              <path d="M5.5 15a7 7 0 1 0 .7-7.8L4 10" />
+            </svg>
+          </button>
+        </div>
+      </div>
       <div class="info-wrap" id="info-wrap">
         <button
           type="button"
@@ -114,43 +149,36 @@
           </button>
         </div>
 
-        <div class="toolbar-group toolbar-colors">
-          <div class="palette" id="palette" aria-label="Dot colors"></div>
-        </div>
-
         <div
-          class="toolbar-group toolbar-settings"
-          aria-label="Nameplate settings"
+          class="toolbar-group toolbar-colors"
+          aria-label="Dot colors and shift controls"
         >
-          <label class="field">
-            <span>Nameplate</span>
-            <input type="color" id="plate-color" value="#000000" />
-          </label>
-          <label class="field">
-            <span>Logo</span>
-            <input type="color" id="logo-color" value="#ffffff" />
-          </label>
-          <div class="settings-shift" aria-label="Shift dots">
-            <span class="arrange-label">Shift</span>
-            <button
-              type="button"
-              id="shift-left"
-              class="btn btn-ghost btn-arrange"
-              aria-label="Shift all dots left one column"
-              title="Shift all dots left"
-            >
-              ◀
-            </button>
-            <button
-              type="button"
-              id="shift-right"
-              class="btn btn-ghost btn-arrange"
-              aria-label="Shift all dots right one column"
-              title="Shift all dots right"
-            >
-              ▶
-            </button>
-          </div>
+          <button
+            type="button"
+            id="shift-left"
+            class="btn btn-ghost btn-arrange"
+            aria-label="Shift all dots left one column"
+            title="Shift all dots left"
+          >
+            ◀
+          </button>
+          <div class="palette" id="palette" aria-label="Dot colors"></div>
+          <input
+            type="color"
+            id="custom-color"
+            class="visually-hidden-color"
+            value="#00c2a8"
+            aria-label="Add custom dot color"
+          />
+          <button
+            type="button"
+            id="shift-right"
+            class="btn btn-ghost btn-arrange"
+            aria-label="Shift all dots right one column"
+            title="Shift all dots right"
+          >
+            ▶
+          </button>
         </div>
 
         <div class="toolbar-group toolbar-text">
@@ -167,21 +195,67 @@
             />
           </label>
           <div class="text-size" role="group" aria-label="Letter size">
-            <button type="button" class="size-btn" data-size="small">
-              Small
+            <button type="button" class="size-btn" data-size="narrow">
+              Narrow
             </button>
             <button
               type="button"
               class="size-btn"
-              data-size="medium"
+              data-size="regular"
               aria-pressed="true"
             >
-              Medium
+              Regular
             </button>
-            <button type="button" class="size-btn" data-size="large">
-              Large
+            <button type="button" class="size-btn" data-size="wide">
+              Wide
             </button>
           </div>
+          <div class="text-align" role="group" aria-label="Text justification">
+            <button
+              type="button"
+              class="align-btn"
+              data-align="left"
+              aria-pressed="true"
+              aria-label="Align text left"
+              title="Align left"
+            >
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M4 6h16M4 10h11M4 14h16M4 18h8" />
+              </svg>
+            </button>
+            <button
+              type="button"
+              class="align-btn"
+              data-align="center"
+              aria-label="Center text"
+              title="Center"
+            >
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M4 6h16M6.5 10h11M4 14h16M8 18h8" />
+              </svg>
+            </button>
+            <button
+              type="button"
+              class="align-btn"
+              data-align="right"
+              aria-label="Align text right"
+              title="Align right"
+            >
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M4 6h16M9 10h11M4 14h16M12 18h8" />
+              </svg>
+            </button>
+          </div>
+        </div>
+      </section>
+
+      <section class="inspiration-section" aria-labelledby="inspiration-title">
+        <div class="section-heading">
+          <h2 id="inspiration-title">Inspiration</h2>
+          <p>Start with an example, then make it your own.</p>
+        </div>
+        <div class="inspiration-grid" id="inspiration-grid">
+          <p class="inspiration-status">Loading examples...</p>
         </div>
       </section>
     </main>
@@ -221,7 +295,31 @@
 
         <section class="drawer-section">
           <h3>Actions</h3>
-          <button type="button" id="download" class="menu-item">
+          <button type="button" id="upload-design" class="menu-item">
+            <svg
+              viewBox="0 0 24 24"
+              width="20"
+              height="20"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              aria-hidden="true"
+            >
+              <path d="M12 21V9" />
+              <path d="m7 14 5-5 5 5" />
+              <path d="M5 3h14" />
+            </svg>
+            <span>Upload design (json)</span>
+          </button>
+          <input
+            type="file"
+            id="design-file"
+            accept=".json,application/json"
+            hidden
+          />
+          <button type="button" id="download-design" class="menu-item">
             <svg
               viewBox="0 0 24 24"
               width="20"
@@ -237,13 +335,9 @@
               <path d="m7 10 5 5 5-5" />
               <path d="M5 21h14" />
             </svg>
-            <span>Download image</span>
+            <span>Download design (json)</span>
           </button>
-          <button
-            type="button"
-            id="clear-all"
-            class="menu-item menu-item-danger"
-          >
+          <button type="button" id="download-image" class="menu-item">
             <svg
               viewBox="0 0 24 24"
               width="20"
@@ -255,11 +349,29 @@
               stroke-linejoin="round"
               aria-hidden="true"
             >
-              <path d="M3 6h18" />
-              <path d="M8 6V4h8v2" />
-              <path d="M6 6l1 14h10l1-14" />
+              <path d="M12 3v12" />
+              <path d="m7 10 5 5 5-5" />
+              <path d="M5 21h14" />
             </svg>
-            <span>Clear all dots</span>
+            <span>Download design (png)</span>
+          </button>
+          <button type="button" id="download-counts" class="menu-item">
+            <svg
+              viewBox="0 0 24 24"
+              width="20"
+              height="20"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              aria-hidden="true"
+            >
+              <path d="M12 3v12" />
+              <path d="m7 10 5 5 5-5" />
+              <path d="M5 21h14" />
+            </svg>
+            <span>Download counts</span>
           </button>
         </section>
       </div>

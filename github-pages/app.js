@@ -1,6 +1,6 @@
 /* =========================================================================
  * SETTINGS — edit these to change the available colors and grid.
- * Each color needs: label (shown in UI/legend), color (any CSS color),
+ * Each built-in color needs: label (shown in UI/legend), color (any CSS color),
  * and key (single lowercase letter used as a desktop shortcut).
  * ========================================================================= */
 const CONFIG = {
@@ -26,6 +26,7 @@ const CONFIG = {
 const STORAGE_KEY = "nameplate-planner-v1";
 // Separate store for named designs saved from the side menu.
 const SAVED_KEY = "nameplate-saved-v1";
+const INSPIRATION_INDEX = "inspiration.json";
 
 // Gap between dots as a fraction of the dot size, so spacing scales with the
 // nameplate as it resizes.
@@ -52,6 +53,7 @@ function loadLogoSvg() {
 }
 
 const { rows, cols, colors } = CONFIG;
+const BUILT_IN_COLOR_COUNT = colors.length;
 
 const state = {
   // grid[r][c] = color index (0..n-1) or null for empty
@@ -63,7 +65,8 @@ const state = {
   lastModified: null, // { row, col } — arrow nav starts here
   arrowStart: null, // { row, col } — set on Escape; overrides arrow-nav start
   zoom: 1, // mobile size multiplier (see ZOOM_* constants)
-  textSize: "medium", // letter size for the write-a-word tool (small/medium/large)
+  textSize: "regular", // letter width for the write-a-word tool
+  textAlign: "left",
 };
 
 // DOM references
@@ -72,11 +75,16 @@ const el = {
   grid: document.getElementById("grid"),
   logo: document.getElementById("logo"),
   palette: document.getElementById("palette"),
+  customColor: document.getElementById("custom-color"),
   stage: document.getElementById("stage"),
   plateColor: document.getElementById("plate-color"),
   logoColor: document.getElementById("logo-color"),
   clearAll: document.getElementById("clear-all"),
-  download: document.getElementById("download"),
+  uploadDesign: document.getElementById("upload-design"),
+  designFile: document.getElementById("design-file"),
+  downloadImage: document.getElementById("download-image"),
+  downloadCounts: document.getElementById("download-counts"),
+  downloadDesign: document.getElementById("download-design"),
   shiftLeft: document.getElementById("shift-left"),
   shiftRight: document.getElementById("shift-right"),
   canvas: document.getElementById("export-canvas"),
@@ -94,6 +102,7 @@ const el = {
   designName: document.getElementById("design-name"),
   saveDesignBtn: document.getElementById("save-design"),
   savedList: document.getElementById("saved-list"),
+  inspirationGrid: document.getElementById("inspiration-grid"),
 };
 
 const cellEls = []; // cellEls[r][c] -> button element
@@ -130,19 +139,116 @@ function buildGrid() {
 function buildPalette() {
   el.palette.innerHTML = "";
   colors.forEach((color, i) => {
+    const wrap = document.createElement("span");
+    wrap.className = "swatch-wrap";
     const btn = document.createElement("button");
     btn.type = "button";
     btn.className = "swatch";
     btn.dataset.index = String(i);
     btn.style.background = color.color;
     btn.style.color = textColorFor(color.color);
-    btn.dataset.tip = `${color.label} (${color.key})`;
+    const shortcut = color.key ? ` (${color.key})` : "";
+    btn.dataset.tip = `${color.label}${shortcut}`;
     btn.setAttribute("aria-pressed", String(i === state.active));
-    btn.setAttribute("aria-label", `${color.label}, shortcut ${color.key}`);
+    btn.setAttribute(
+      "aria-label",
+      color.key ? `${color.label}, shortcut ${color.key}` : color.label
+    );
     btn.innerHTML = `<span class="count" data-count="${i}">0</span>`;
     btn.addEventListener("click", () => setActive(i));
-    el.palette.appendChild(btn);
+    wrap.appendChild(btn);
+    if (color.custom) {
+      wrap.classList.add("custom-swatch-wrap");
+      const remove = document.createElement("button");
+      remove.type = "button";
+      remove.className = "remove-color";
+      remove.textContent = "×";
+      remove.title = `Remove ${color.label}`;
+      remove.setAttribute("aria-label", `Remove ${color.label}`);
+      remove.addEventListener("click", () => removeCustomColor(i));
+      wrap.appendChild(remove);
+    }
+    el.palette.appendChild(wrap);
   });
+
+  const add = document.createElement("label");
+  add.className = "swatch add-color";
+  add.htmlFor = "custom-color";
+  add.dataset.tip = "Add";
+  add.title = "Add";
+  add.setAttribute("aria-label", "Add custom color");
+  add.tabIndex = 0;
+  add.textContent = "+";
+  add.addEventListener("keydown", (event) => {
+    if (event.key === "Enter" || event.key === " ") {
+      event.preventDefault();
+      el.customColor.click();
+    }
+  });
+  el.palette.appendChild(add);
+}
+
+function customColorValues() {
+  return colors.slice(BUILT_IN_COLOR_COUNT).map((color) => color.color);
+}
+
+function restoreCustomColors(values, legacyValue) {
+  colors.splice(BUILT_IN_COLOR_COUNT);
+  const customValues = Array.isArray(values)
+    ? values
+    : typeof legacyValue === "string"
+      ? [legacyValue]
+      : [];
+  customValues
+    .filter((value) => /^#[0-9a-f]{6}$/i.test(value))
+    .forEach((color, index) => {
+      colors.push({
+        label: color,
+        color,
+        number: index + 1,
+        key: index < 9 ? String(index + 1) : null,
+        custom: true,
+      });
+    });
+  if (state.active >= colors.length) state.active = 0;
+}
+
+function addCustomColor(value) {
+  if (!/^#[0-9a-f]{6}$/i.test(value)) return;
+  const number = colors.length - BUILT_IN_COLOR_COUNT + 1;
+  colors.push({
+    label: value,
+    color: value,
+    number,
+    key: number < 10 ? String(number) : null,
+    custom: true,
+  });
+  buildPalette();
+  updateCounts();
+  setActive(colors.length - 1);
+  save();
+}
+
+function removeCustomColor(index) {
+  if (index < BUILT_IN_COLOR_COUNT || index >= colors.length) return;
+  colors.splice(index, 1);
+  for (let r = 0; r < rows; r++)
+    for (let c = 0; c < cols; c++) {
+      const value = state.grid[r][c];
+      if (value === index) state.grid[r][c] = null;
+      else if (value !== null && value > index) state.grid[r][c] = value - 1;
+    }
+  colors.slice(BUILT_IN_COLOR_COUNT).forEach((color, customIndex) => {
+    const number = customIndex + 1;
+    color.number = number;
+    color.key = number < 10 ? String(number) : null;
+  });
+  if (state.active === index) state.active = 0;
+  else if (state.active > index) state.active--;
+  buildPalette();
+  repaintAll();
+  updateCounts();
+  save();
 }
 
 // Relative brightness (0–1) of a hex color.
@@ -384,27 +490,66 @@ function onKeyDown(e) {
 /* --------------------------------------------------------------------- */
 /* Persistence                                                           */
 /* --------------------------------------------------------------------- */
-// Serialize the grid to a string of one char per cell ("." = empty, else the
-// color index). Works because there are at most 10 colors (single digit).
+// Store one nullable color index per cell so the palette can grow without an
+// encoding limit. String decoding below keeps older saved designs compatible.
 function encodeGrid() {
-  let g = "";
+  const encoded = [];
   for (let r = 0; r < rows; r++)
     for (let c = 0; c < cols; c++) {
-      const v = state.grid[r][c];
-      g += v === null ? "." : String(v);
+      encoded.push(state.grid[r][c]);
     }
-  return g;
+  return encoded;
 }
 
-// Restore the grid from a string produced by encodeGrid().
+function encodeDesignGrid() {
+  const encoded = [];
+  for (let r = 0; r < rows; r++) {
+    let row = "";
+    for (let c = 0; c < cols; c++) {
+      const value = state.grid[r][c];
+      if (value === null) {
+        row += ".";
+      } else if (value < BUILT_IN_COLOR_COUNT) {
+        row += colors[value].key;
+      } else {
+        const customIndex = value - BUILT_IN_COLOR_COUNT;
+        if (customIndex < 9) {
+          row += String(customIndex + 1);
+        } else if (customIndex < 35) {
+          row += String.fromCharCode("A".charCodeAt(0) + customIndex - 9);
+        } else {
+          return null;
+        }
+      }
+    }
+    encoded.push(row);
+  }
+  return encoded;
+}
+
+function decodeGrid(g, colorCount = colors.length) {
+  if (Array.isArray(g) && g.length === rows * cols) {
+    return g.map((value) =>
+      value === null ||
+      (Number.isInteger(value) && value >= 0 && value < colorCount)
+        ? value
+        : null
+    );
+  }
+  if (typeof g !== "string" || g.length !== rows * cols) return null;
+  return [...g].map((ch) => {
+    const value = ch === "." ? null : parseInt(ch, 36);
+    return value !== null && value < colorCount ? value : null;
+  });
+}
+
 function applyGridString(g) {
-  if (typeof g !== "string" || g.length !== rows * cols) return;
+  const decoded = decodeGrid(g);
+  if (!decoded) return;
   let k = 0;
   for (let r = 0; r < rows; r++)
     for (let c = 0; c < cols; c++) {
-      const ch = g[k++];
-      const v = ch === "." ? null : Number(ch);
-      state.grid[r][c] = v !== null && v < colors.length ? v : null;
+      state.grid[r][c] = decoded[k++];
     }
 }
 
@@ -418,6 +563,8 @@ function save() {
         plate: state.plateColor,
         logo: state.logoColor,
         textSize: state.textSize,
+        textAlign: state.textAlign,
+        customColors: customColorValues(),
       })
     );
   } catch (_) {
@@ -434,20 +581,40 @@ function load() {
   }
   if (!data) return;
 
+  restoreCustomColors(data.customColors, data.custom);
   applyGridString(data.g);
   if (typeof data.active === "number" && data.active < colors.length)
     state.active = data.active;
   if (typeof data.plate === "string") state.plateColor = data.plate;
   if (typeof data.logo === "string") state.logoColor = data.logo;
-  if (window.NameplateFont && window.NameplateFont.SIZES[data.textSize])
-    state.textSize = data.textSize;
+  const legacySizes = { small: "narrow", medium: "regular", large: "wide" };
+  const textSize = legacySizes[data.textSize] || data.textSize;
+  if (window.NameplateFont && window.NameplateFont.SIZES[textSize])
+    state.textSize = textSize;
+  if (["left", "center", "right"].includes(data.textAlign))
+    state.textAlign = data.textAlign;
 }
 
 /* --------------------------------------------------------------------- */
-/* Download (plate render + build legend)                                */
+/* Downloads                                                             */
 /* --------------------------------------------------------------------- */
-async function download() {
-  const counts = updateCounts();
+function prepareExportCanvas(width, height, scale = 2) {
+  const canvas = el.canvas;
+  canvas.width = width * scale;
+  canvas.height = height * scale;
+  const ctx = canvas.getContext("2d");
+  ctx.scale(scale, scale);
+  return { canvas, ctx };
+}
+
+function downloadCanvas(canvas, filename) {
+  const link = document.createElement("a");
+  link.download = filename;
+  link.href = canvas.toDataURL("image/png");
+  link.click();
+}
+
+async function downloadImage() {
   const scale = 2;
   const cell = 24;
   const gap = 4;
@@ -459,35 +626,12 @@ async function download() {
   const plateW = pad + logoD + pad + gridW + pad;
   const plateH = pad + gridH + pad;
 
-  const used = colors
-    .map((c, i) => ({ ...c, count: counts[i] }))
-    .filter((c) => c.count > 0);
+  const { canvas, ctx } = prepareExportCanvas(plateW, plateH, scale);
 
-  const legendTop = plateH + 28;
-  const legendRowH = 30;
-  const legendH = used.length
-    ? 24 + used.length * legendRowH + 12
-    : 0;
-
-  const W = plateW;
-  const H = plateH + legendH + pad;
-
-  const canvas = el.canvas;
-  canvas.width = W * scale;
-  canvas.height = H * scale;
-  const ctx = canvas.getContext("2d");
-  ctx.scale(scale, scale);
-
-  // page background
-  ctx.fillStyle = "#ffffff";
-  ctx.fillRect(0, 0, W, H);
-
-  // plate
   ctx.fillStyle = state.plateColor;
   roundRect(ctx, 0, 0, plateW, plateH, 18);
   ctx.fill();
 
-  // grid cells (logo is drawn last, after its SVG loads)
   const gx = pad + logoD + pad;
   const gy = pad;
   for (let r = 0; r < rows; r++)
@@ -500,34 +644,77 @@ async function download() {
       ctx.fill();
     }
 
-  // legend
+  await drawLogoOnCanvas(ctx, pad, pad, logoD);
+  downloadCanvas(canvas, "nameplate.png");
+}
+
+function downloadCounts() {
+  const counts = updateCounts();
+  const used = colors
+    .map((c, i) => ({ ...c, count: counts[i] }))
+    .filter((c) => c.count > 0);
+  const scale = 2;
+  const pad = 24;
+  const titleH = 28;
+  const legendRowH = 30;
+  const contentRows = Math.max(used.length, 1);
+  const width = 360;
+  const height = pad + titleH + contentRows * legendRowH + pad;
+  const { canvas, ctx } = prepareExportCanvas(width, height, scale);
+
+  ctx.fillStyle = "#ffffff";
+  ctx.fillRect(0, 0, width, height);
+
+  ctx.fillStyle = "#1f2328";
+  ctx.font = "700 18px -apple-system, Segoe UI, Arial, sans-serif";
+  ctx.textBaseline = "middle";
+  ctx.fillText("Inserts needed", pad, pad + titleH / 2);
   if (used.length) {
-    ctx.fillStyle = "#1f2328";
-    ctx.font = "700 18px -apple-system, Segoe UI, Arial, sans-serif";
-    ctx.textBaseline = "middle";
-    ctx.fillText("Inserts needed", 0, legendTop);
     used.forEach((c, i) => {
-      const y = legendTop + 24 + i * legendRowH + legendRowH / 2;
+      const y = pad + titleH + i * legendRowH + legendRowH / 2;
       ctx.fillStyle = c.color;
-      roundRect(ctx, 0, y - 10, 20, 20, 5);
+      roundRect(ctx, pad, y - 10, 20, 20, 5);
       ctx.fill();
       ctx.strokeStyle = "rgba(0,0,0,0.15)";
       ctx.lineWidth = 1;
-      roundRect(ctx, 0, y - 10, 20, 20, 5);
+      roundRect(ctx, pad, y - 10, 20, 20, 5);
       ctx.stroke();
       ctx.fillStyle = "#1f2328";
       ctx.font = "400 16px -apple-system, Segoe UI, Arial, sans-serif";
-      ctx.fillText(`${c.label} — ${c.count}`, 30, y);
+      ctx.fillText(`${c.label} — ${c.count}`, pad + 30, y);
     });
+  } else {
+    ctx.fillStyle = "#656d76";
+    ctx.font = "400 16px -apple-system, Segoe UI, Arial, sans-serif";
+    ctx.fillText("No inserts needed", pad, pad + titleH + legendRowH / 2);
   }
 
-  // logo mark, recolored to the logo color from the SVG file
-  await drawLogoOnCanvas(ctx, pad, pad, logoD);
+  downloadCanvas(canvas, "nameplate-counts.png");
+}
 
+function downloadDesign() {
+  const grid = encodeDesignGrid();
+  if (!grid) {
+    alert("Design downloads support up to 35 custom colors.");
+    return;
+  }
+  const design = {
+    name: "nameplate-design",
+    plate: state.plateColor,
+    logo: state.logoColor,
+    grid,
+  };
+  const customColors = customColorValues();
+  if (customColors.length) design.customColors = customColors;
+  const blob = new Blob([JSON.stringify(design, null, 2) + "\n"], {
+    type: "application/json",
+  });
+  const url = URL.createObjectURL(blob);
   const link = document.createElement("a");
-  link.download = "nameplate-plan.png";
-  link.href = canvas.toDataURL("image/png");
+  link.download = "nameplate-design.json";
+  link.href = url;
   link.click();
+  setTimeout(() => URL.revokeObjectURL(url), 0);
 }
 
 function drawLogoOnCanvas(ctx, x, y, size) {
@@ -622,9 +809,9 @@ function toggleMenu() {
 /* --------------------------------------------------------------------- */
 /* Write a word (stamp text as dots)                                     */
 /* --------------------------------------------------------------------- */
-// Fill the grid with a word rendered in the active color, starting at the far
-// left. Letters are stamped until the next one would overflow the 52 columns —
-// there is no fixed character limit, only the physical width of the plate.
+// Fill the grid with a word rendered in the active color. Letters are included
+// until the next one would overflow the 52 columns, then the visible dots are
+// aligned within the plate.
 function applyText(raw) {
   const F = window.NameplateFont;
   if (!F) return;
@@ -634,19 +821,38 @@ function applyText(raw) {
   // Writing a word replaces the current dots so the result is predictable.
   state.grid = Array.from({ length: rows }, () => Array(cols).fill(null));
 
-  let cursor = 0;
+  const textColumns = [];
   for (const ch of word) {
-    const w = F.glyphWidth(ch, state.textSize);
-    if (w === 0) continue; // unsupported character — skip it
-    if (cursor + w > cols) break; // next letter would run off the plate
     const glyph = F.charColumns(ch, state.textSize);
-    for (let gc = 0; gc < w; gc++) {
-      const col = glyph[gc];
+    const w = glyph.length;
+    if (w === 0) continue; // unsupported character — skip it
+    const spacer = textColumns.length ? 1 : 0;
+    if (textColumns.length + spacer + w > cols) break;
+    if (spacer) textColumns.push(Array(rows).fill(false));
+    textColumns.push(...glyph);
+  }
+
+  const filledColumns = textColumns
+    .map((column, index) => (column.some(Boolean) ? index : -1))
+    .filter((index) => index >= 0);
+  if (filledColumns.length) {
+    const first = filledColumns[0];
+    const last = filledColumns[filledColumns.length - 1];
+    const visibleWidth = last - first + 1;
+    let visibleStart = 0;
+    if (state.textAlign === "center")
+      visibleStart = Math.floor((cols - visibleWidth) / 2);
+    else if (state.textAlign === "right") visibleStart = cols - visibleWidth;
+    const offset = visibleStart - first;
+
+    for (let tc = 0; tc < textColumns.length; tc++) {
+      const col = textColumns[tc];
       for (let r = 0; r < rows; r++) {
-        if (col[r]) state.grid[r][cursor + gc] = state.active;
+        const target = offset + tc;
+        if (col[r] && target >= 0 && target < cols)
+          state.grid[r][target] = state.active;
       }
     }
-    cursor += w + 1; // one blank spacer column between letters
   }
 
   state.highlight = null;
@@ -664,6 +870,19 @@ function setTextSize(size) {
   state.textSize = size;
   document.querySelectorAll(".size-btn").forEach((b) => {
     b.setAttribute("aria-pressed", String(b.dataset.size === size));
+  });
+  save();
+  if (el.textInput.value) applyText(el.textInput.value);
+}
+
+function setTextAlign(align) {
+  if (!["left", "center", "right"].includes(align)) return;
+  state.textAlign = align;
+  document.querySelectorAll(".align-btn").forEach((button) => {
+    button.setAttribute(
+      "aria-pressed",
+      String(button.dataset.align === align)
+    );
   });
   save();
   if (el.textInput.value) applyText(el.textInput.value);
@@ -701,6 +920,7 @@ function saveDesign() {
     g: encodeGrid(),
     plate: state.plateColor,
     logo: state.logoColor,
+    customColors: customColorValues(),
     savedAt: Date.now(),
   };
   const i = arr.findIndex((d) => d.name === name);
@@ -718,6 +938,7 @@ function saveDesign() {
 function loadDesign(name) {
   const d = loadSaved().find((x) => x.name === name);
   if (!d) return;
+  restoreCustomColors(d.customColors, d.custom);
   applyGridString(d.g);
   if (typeof d.plate === "string") state.plateColor = d.plate;
   if (typeof d.logo === "string") state.logoColor = d.logo;
@@ -725,10 +946,220 @@ function loadDesign(name) {
   state.lastModified = null;
   state.arrowStart = null;
   applyColors();
+  buildPalette();
   repaintAll();
   updateCounts();
   save();
   closeMenu();
+}
+
+function designGridString(design) {
+  const designCustomColors = getDesignCustomColors(design);
+  const designColorCount = BUILT_IN_COLOR_COUNT + designCustomColors.length;
+  if (Array.isArray(design.g) || typeof design.g === "string")
+    return decodeGrid(design.g, designColorCount);
+  if (
+    Array.isArray(design.grid) &&
+    design.grid.length === rows &&
+    design.grid.every((row) => typeof row === "string" && row.length === cols)
+  ) {
+    const encoded = [];
+    for (const ch of design.grid.join("")) {
+      if (ch === ".") {
+        encoded.push(null);
+        continue;
+      }
+      if (ch === "c" && designCustomColors.length) {
+        encoded.push(BUILT_IN_COLOR_COUNT);
+        continue;
+      }
+      const colorIndex = colors
+        .slice(0, BUILT_IN_COLOR_COUNT)
+        .findIndex((color) => color.key === ch);
+      if (colorIndex >= 0) {
+        encoded.push(colorIndex);
+        continue;
+      }
+      if (/^[A-Z]$/.test(ch)) {
+        const customNumber = ch.charCodeAt(0) - "A".charCodeAt(0) + 10;
+        if (customNumber <= designCustomColors.length) {
+          encoded.push(BUILT_IN_COLOR_COUNT + customNumber - 1);
+          continue;
+        }
+      }
+      const customNumber = Number(ch);
+      if (
+        Number.isInteger(customNumber) &&
+        customNumber > 0 &&
+        customNumber <= designCustomColors.length
+      ) {
+        encoded.push(BUILT_IN_COLOR_COUNT + customNumber - 1);
+        continue;
+      }
+      const legacyIndex = parseInt(ch, 36);
+      if (!Number.isInteger(legacyIndex) || legacyIndex >= designColorCount)
+        return null;
+      encoded.push(legacyIndex);
+    }
+    return encoded;
+  }
+  return null;
+}
+
+function getDesignCustomColors(design) {
+  if (Array.isArray(design.customColors)) return design.customColors;
+  return typeof design.custom === "string" ? [design.custom] : [];
+}
+
+function applyDesignData(design, grid) {
+  restoreCustomColors(design.customColors, design.custom);
+  applyGridString(grid);
+  if (typeof design.plate === "string") state.plateColor = design.plate;
+  if (typeof design.logo === "string") state.logoColor = design.logo;
+  state.highlight = null;
+  state.lastModified = null;
+  state.arrowStart = null;
+  applyColors();
+  buildPalette();
+  repaintAll();
+  updateCounts();
+  setActive(state.active);
+  save();
+  window.scrollTo({ top: 0, behavior: "smooth" });
+}
+
+function validateUploadedDesign(design) {
+  if (!design || typeof design !== "object" || Array.isArray(design))
+    throw new Error("The file must contain a JSON design object.");
+  if (typeof design.name !== "string" || !design.name.trim())
+    throw new Error("The design must include a name.");
+  if (!/^#[0-9a-f]{6}$/i.test(design.plate))
+    throw new Error("The design must include a six-digit plate color.");
+  if (!/^#[0-9a-f]{6}$/i.test(design.logo))
+    throw new Error("The design must include a six-digit logo color.");
+
+  const customColors = design.customColors ?? [];
+  if (
+    !Array.isArray(customColors) ||
+    customColors.length > 35 ||
+    customColors.some((color) => !/^#[0-9a-f]{6}$/i.test(color))
+  ) {
+    throw new Error("Custom colors must be an array of up to 35 hex colors.");
+  }
+  if (
+    !Array.isArray(design.grid) ||
+    design.grid.length !== rows ||
+    !design.grid.every(
+      (row) => typeof row === "string" && row.length === cols
+    )
+  ) {
+    throw new Error(`The grid must contain ${rows} rows of ${cols} characters.`);
+  }
+  const builtInKeys = new Set(
+    colors.slice(0, BUILT_IN_COLOR_COUNT).map((color) => color.key)
+  );
+  for (const ch of design.grid.join("")) {
+    if (ch === "." || builtInKeys.has(ch)) continue;
+    if (/^[1-9]$/.test(ch) && Number(ch) <= customColors.length) continue;
+    if (
+      /^[A-Z]$/.test(ch) &&
+      ch.charCodeAt(0) - "A".charCodeAt(0) + 10 <= customColors.length
+    ) {
+      continue;
+    }
+    throw new Error(`The grid contains an unknown color reference: ${ch}`);
+  }
+
+  const grid = designGridString(design);
+  if (!grid) throw new Error("The grid contains an unknown color reference.");
+  return grid;
+}
+
+async function uploadDesignFile(file) {
+  try {
+    const design = JSON.parse(await file.text());
+    const grid = validateUploadedDesign(design);
+    applyDesignData(design, grid);
+    closeMenu();
+  } catch (error) {
+    const message =
+      error instanceof Error ? error.message : "The file could not be read.";
+    alert(`Could not upload design: ${message}`);
+  } finally {
+    el.designFile.value = "";
+  }
+}
+
+function renderInspiration(designs) {
+  el.inspirationGrid.innerHTML = "";
+  if (!designs.length) {
+    el.inspirationGrid.innerHTML =
+      '<p class="inspiration-status">No examples are available yet.</p>';
+    return;
+  }
+
+  designs.forEach((design) => {
+    const grid = designGridString(design);
+    if (!grid) return;
+    const card = document.createElement("button");
+    card.type = "button";
+    card.className = "inspiration-card";
+    card.setAttribute(
+      "aria-label",
+      `Use ${design.name || "inspirational"} design`
+    );
+    card.addEventListener("click", () => applyDesignData(design, grid));
+
+    const preview = document.createElement("div");
+    preview.className = "inspiration-preview";
+    preview.style.setProperty("--preview-plate", design.plate || "#000000");
+    preview.style.setProperty("--preview-logo", design.logo || "#ffffff");
+    const logo = document.createElement("span");
+    logo.setAttribute("aria-hidden", "true");
+    logo.className = "inspiration-logo";
+    const dotGrid = document.createElement("span");
+    dotGrid.setAttribute("aria-hidden", "true");
+    dotGrid.className = "inspiration-dot-grid";
+    const designCustomColors = getDesignCustomColors(design);
+    const previewColors = [
+      ...colors.slice(0, BUILT_IN_COLOR_COUNT).map((color) => color.color),
+      ...designCustomColors,
+    ];
+    for (let c = 0; c < cols; c++) {
+      for (let r = 0; r < rows; r++) {
+        const index = grid[r * cols + c];
+        const dot = document.createElement("span");
+        dot.className = "inspiration-dot";
+        if (index !== null && previewColors[index]) {
+          dot.style.background = previewColors[index];
+        }
+        dotGrid.appendChild(dot);
+      }
+    }
+    preview.append(logo, dotGrid);
+
+    card.appendChild(preview);
+    el.inspirationGrid.appendChild(card);
+  });
+}
+
+async function loadInspiration() {
+  try {
+    const indexResponse = await fetch(INSPIRATION_INDEX);
+    if (!indexResponse.ok) throw new Error("Unable to load inspiration index");
+    const files = await indexResponse.json();
+    if (!Array.isArray(files)) throw new Error("Invalid inspiration index");
+    const responses = await Promise.all(
+      files.map((file) => fetch(`inspiration/${file}`))
+    );
+    if (responses.some((response) => !response.ok))
+      throw new Error("Unable to load an inspiration design");
+    renderInspiration(await Promise.all(responses.map((r) => r.json())));
+  } catch (error) {
+    console.error(error);
+    el.inspirationGrid.innerHTML =
+      '<p class="inspiration-status">Examples could not be loaded.</p>';
+  }
 }
 
 function deleteDesign(name) {
@@ -793,8 +1224,18 @@ function init() {
     applyColors();
     save();
   });
+  el.customColor.addEventListener("change", (e) =>
+    addCustomColor(e.target.value)
+  );
   el.clearAll.addEventListener("click", clearAll);
-  el.download.addEventListener("click", download);
+  el.uploadDesign.addEventListener("click", () => el.designFile.click());
+  el.designFile.addEventListener("change", () => {
+    const [file] = el.designFile.files;
+    if (file) uploadDesignFile(file);
+  });
+  el.downloadImage.addEventListener("click", downloadImage);
+  el.downloadCounts.addEventListener("click", downloadCounts);
+  el.downloadDesign.addEventListener("click", downloadDesign);
   el.shiftLeft.addEventListener("click", () => shiftColumns(-1));
   el.shiftRight.addEventListener("click", () => shiftColumns(1));
   el.infoBtn.addEventListener("click", toggleInfo);
@@ -804,6 +1245,7 @@ function init() {
 
   // Side menu (drawer)
   renderSavedList();
+  loadInspiration();
   el.menuBtn.addEventListener("click", toggleMenu);
   el.drawerClose.addEventListener("click", closeMenu);
   el.drawerOverlay.addEventListener("click", closeMenu);
@@ -824,6 +1266,10 @@ function init() {
     b.addEventListener("click", () => setTextSize(b.dataset.size));
   });
   setTextSize(state.textSize); // reflect the restored/default size on the buttons
+  document.querySelectorAll(".align-btn").forEach((button) => {
+    button.addEventListener("click", () => setTextAlign(button.dataset.align));
+  });
+  setTextAlign(state.textAlign);
   el.saveDesignBtn.addEventListener("click", saveDesign);
   el.designName.addEventListener("keydown", (e) => {
     if (e.key === "Enter") {
