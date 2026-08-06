@@ -1,11 +1,272 @@
 <!doctype html>
 <html lang="en">
   <head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>GitHub Desk Nameplate</title>
+    <meta charset="utf-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1, viewport-fit=cover"
+    />
+    <title>Nameplate Designer</title>
+    <meta
+      name="description"
+      content="Plan the dot layout for your GitHub contribution-graph desk nameplate."
+    />
+    <!-- Full-page app feel when added to a phone home screen (standalone). -->
+    <meta name="theme-color" content="#f5f6f8" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta
+      name="apple-mobile-web-app-status-bar-style"
+      content="black-translucent"
+    />
+    <meta name="apple-mobile-web-app-title" content="Nameplate" />
+    <link rel="manifest" href="manifest.webmanifest" />
+    <link rel="icon" type="image/svg+xml" href="favicon.svg" />
+    <link rel="apple-touch-icon" href="favicon.svg" />
+    <link rel="stylesheet" href="styles.css" />
   </head>
   <body>
-    <h1>Hello world</h1>
+    <header class="app-header">
+      <button
+        type="button"
+        class="menu-btn"
+        id="menu-btn"
+        aria-label="Open menu"
+        aria-expanded="false"
+        aria-controls="drawer"
+      >
+        <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true">
+          <path
+            d="M3 6h18M3 12h18M3 18h18"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+          />
+        </svg>
+      </button>
+      <h1>Nameplate Designer</h1>
+      <p class="subtitle">How much swagger can you earn?</p>
+      <div class="info-wrap" id="info-wrap">
+        <button
+          type="button"
+          class="info-btn"
+          id="info-btn"
+          aria-label="Instructions"
+          aria-expanded="false"
+          aria-controls="info-popover"
+        >
+          i
+        </button>
+        <div
+          class="info-popover"
+          id="info-popover"
+          role="dialog"
+          aria-label="Instructions"
+          hidden
+        >
+          <p>
+            Select a color, then tap a location to insert a colored dot. Tap it
+            again to remove the dot.
+          </p>
+          <p>
+            On desktop: use arrow keys to move.<br />
+            Press <kbd>Space</kbd> or <kbd>Enter</kbd> to insert/remove.<br />
+            Press <kbd>Tab</kbd> to switch colors.
+          </p>
+        </div>
+      </div>
+    </header>
+
+    <main>
+      <section class="stage-wrap">
+        <div class="stage" id="stage" tabindex="0" aria-label="Nameplate grid">
+          <div class="plate" id="plate">
+            <div
+              class="logo"
+              id="logo"
+              role="img"
+              aria-label="GitHub logo"
+            ></div>
+            <div class="grid" id="grid"></div>
+          </div>
+        </div>
+      </section>
+
+      <section class="toolbar" aria-label="Design settings">
+        <div class="toolbar-group zoom-control" aria-label="Nameplate size">
+          <button
+            type="button"
+            id="zoom-out"
+            class="zoom-btn"
+            aria-label="Smaller dots"
+          >
+            −
+          </button>
+          <span class="zoom-label" id="zoom-label">100%</span>
+          <button
+            type="button"
+            id="zoom-in"
+            class="zoom-btn"
+            aria-label="Larger dots"
+          >
+            +
+          </button>
+        </div>
+
+        <div class="toolbar-group toolbar-colors">
+          <div class="palette" id="palette" aria-label="Dot colors"></div>
+        </div>
+
+        <div
+          class="toolbar-group toolbar-settings"
+          aria-label="Nameplate settings"
+        >
+          <label class="field">
+            <span>Nameplate</span>
+            <input type="color" id="plate-color" value="#000000" />
+          </label>
+          <label class="field">
+            <span>Logo</span>
+            <input type="color" id="logo-color" value="#ffffff" />
+          </label>
+          <div class="settings-shift" aria-label="Shift dots">
+            <span class="arrange-label">Shift</span>
+            <button
+              type="button"
+              id="shift-left"
+              class="btn btn-ghost btn-arrange"
+              aria-label="Shift all dots left one column"
+              title="Shift all dots left"
+            >
+              ◀
+            </button>
+            <button
+              type="button"
+              id="shift-right"
+              class="btn btn-ghost btn-arrange"
+              aria-label="Shift all dots right one column"
+              title="Shift all dots right"
+            >
+              ▶
+            </button>
+          </div>
+        </div>
+
+        <div class="toolbar-group toolbar-text">
+          <label class="text-tool" for="text-input">
+            <input
+              type="text"
+              id="text-input"
+              class="text-tool-input"
+              placeholder="Draw text... e.g. 'chriswblake'"
+              autocomplete="off"
+              autocapitalize="off"
+              spellcheck="false"
+              aria-label="Insert text to draw on the nameplate"
+            />
+          </label>
+          <div class="text-size" role="group" aria-label="Letter size">
+            <button type="button" class="size-btn" data-size="small">
+              Small
+            </button>
+            <button
+              type="button"
+              class="size-btn"
+              data-size="medium"
+              aria-pressed="true"
+            >
+              Medium
+            </button>
+            <button type="button" class="size-btn" data-size="large">
+              Large
+            </button>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <!-- Side menu (drawer) -->
+    <div class="drawer-overlay" id="drawer-overlay"></div>
+    <aside class="drawer" id="drawer" aria-label="Menu" aria-hidden="true">
+      <div class="drawer-head">
+        <h2>Menu</h2>
+        <button
+          type="button"
+          class="drawer-close"
+          id="drawer-close"
+          aria-label="Close menu"
+        >
+          ×
+        </button>
+      </div>
+
+      <div class="drawer-body">
+        <section class="drawer-section">
+          <h3>Saved designs</h3>
+          <div class="drawer-row">
+            <input
+              type="text"
+              id="design-name"
+              class="drawer-input"
+              placeholder="Name this design"
+              autocomplete="off"
+            />
+            <button type="button" id="save-design" class="menu-btn-primary">
+              Save
+            </button>
+          </div>
+          <ul class="saved-list" id="saved-list"></ul>
+        </section>
+
+        <section class="drawer-section">
+          <h3>Actions</h3>
+          <button type="button" id="download" class="menu-item">
+            <svg
+              viewBox="0 0 24 24"
+              width="20"
+              height="20"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              aria-hidden="true"
+            >
+              <path d="M12 3v12" />
+              <path d="m7 10 5 5 5-5" />
+              <path d="M5 21h14" />
+            </svg>
+            <span>Download image</span>
+          </button>
+          <button
+            type="button"
+            id="clear-all"
+            class="menu-item menu-item-danger"
+          >
+            <svg
+              viewBox="0 0 24 24"
+              width="20"
+              height="20"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              aria-hidden="true"
+            >
+              <path d="M3 6h18" />
+              <path d="M8 6V4h8v2" />
+              <path d="M6 6l1 14h10l1-14" />
+            </svg>
+            <span>Clear all dots</span>
+          </button>
+        </section>
+      </div>
+    </aside>
+
+    <canvas id="export-canvas" hidden></canvas>
+    <script src="font.js"></script>
+    <script src="app.js"></script>
   </body>
 </html>
