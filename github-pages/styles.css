@@ -860,6 +860,98 @@ kbd {
   font-size: 0.9rem;
 }
 
+.saved-design-actions {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 0;
+}
+
+.saved-designs-section.has-saved-designs .saved-design-actions {
+  margin-bottom: 18px;
+}
+
+.save-design-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-width: 126px;
+  min-height: 46px;
+  padding: 9px 22px;
+  border: 1px solid #075bbd;
+  border-radius: 12px;
+  background: linear-gradient(180deg, #218bff 0%, var(--accent) 100%);
+  color: #fff;
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.25) inset,
+    0 4px 10px rgba(9, 105, 218, 0.24);
+  transition:
+    transform 0.15s ease,
+    box-shadow 0.15s ease,
+    filter 0.15s ease;
+}
+
+.save-design-button:hover {
+  filter: brightness(1.04);
+  transform: translateY(-1px);
+  box-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.3) inset,
+    0 6px 14px rgba(9, 105, 218, 0.3);
+}
+
+.save-design-button:active {
+  transform: translateY(1px);
+  box-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.2) inset,
+    0 2px 5px rgba(9, 105, 218, 0.22);
+}
+
+.save-design-button svg {
+  width: 19px;
+  height: 19px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.save-design-button:focus-visible,
+.saved-design-delete:focus-visible {
+  outline: 3px solid rgba(9, 105, 218, 0.3);
+  outline-offset: 2px;
+}
+
+.saved-design-item {
+  position: relative;
+  min-width: 0;
+}
+
+.saved-design-delete {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  width: 28px;
+  height: 28px;
+  padding: 0 0 2px;
+  border: 1px solid rgba(255, 255, 255, 0.75);
+  border-radius: 50%;
+  background: rgba(31, 35, 40, 0.82);
+  color: #fff;
+  font: inherit;
+  font-size: 1rem;
+  line-height: 1;
+  cursor: pointer;
+  z-index: 1;
+}
+
+.saved-design-delete:hover {
+  background: #cf222e;
+}
+
 /* Hamburger menu button (top-left of header) --------------------------- */
 .menu-btn {
   position: absolute;
@@ -979,111 +1071,6 @@ kbd {
 
 .drawer-instructions p:last-child {
   margin-bottom: 0;
-}
-
-.drawer-row {
-  display: flex;
-  gap: 8px;
-}
-
-.drawer-input {
-  flex: 1;
-  min-width: 0;
-  height: 40px;
-  padding: 0 12px;
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  background: var(--bg);
-  color: var(--text);
-  font-size: 0.95rem;
-}
-
-.drawer-input:focus {
-  outline: none;
-  border-color: var(--accent);
-  box-shadow: 0 0 0 3px rgba(9, 105, 218, 0.18);
-}
-
-.drawer-hint {
-  margin: 8px 0 0;
-  font-size: 0.8rem;
-  color: var(--muted);
-}
-
-.menu-btn-primary {
-  height: 40px;
-  padding: 0 16px;
-  border: none;
-  border-radius: 10px;
-  background: var(--accent);
-  color: #fff;
-  font-weight: 600;
-  cursor: pointer;
-  flex: 0 0 auto;
-}
-
-.menu-btn-primary:hover {
-  background: #0860ca;
-}
-
-/* Saved-designs list */
-.saved-list {
-  list-style: none;
-  margin: 12px 0 0;
-  padding: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-
-.saved-empty {
-  color: var(--muted);
-  font-size: 0.85rem;
-  padding: 4px 2px;
-}
-
-.saved-item {
-  display: flex;
-  align-items: stretch;
-  gap: 6px;
-}
-
-.saved-load {
-  flex: 1;
-  min-width: 0;
-  text-align: left;
-  padding: 10px 12px;
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  background: var(--bg);
-  color: var(--text);
-  font-size: 0.92rem;
-  cursor: pointer;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.saved-load:hover {
-  border-color: var(--accent);
-  color: var(--accent);
-}
-
-.saved-delete {
-  flex: 0 0 auto;
-  width: 40px;
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  background: var(--bg);
-  color: var(--muted);
-  font-size: 1.3rem;
-  line-height: 1;
-  cursor: pointer;
-}
-
-.saved-delete:hover {
-  border-color: #e5484d;
-  color: #e5484d;
 }
 
 /* Full-width action items in the drawer */

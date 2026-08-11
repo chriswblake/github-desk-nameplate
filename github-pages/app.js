@@ -24,7 +24,7 @@ const CONFIG = {
 /* ===================== end of settings =================================== */
 
 const STORAGE_KEY = "nameplate-planner-v1";
-// Separate store for named designs saved from the side menu.
+// Separate store for designs saved from the main designer.
 const SAVED_KEY = "nameplate-saved-v1";
 const INSPIRATION_INDEX = "inspiration.json";
 
@@ -119,9 +119,9 @@ const el = {
   drawerOverlay: document.getElementById("drawer-overlay"),
   drawerClose: document.getElementById("drawer-close"),
   textInput: document.getElementById("text-input"),
-  designName: document.getElementById("design-name"),
   saveDesignBtn: document.getElementById("save-design"),
-  savedList: document.getElementById("saved-list"),
+  savedDesignsSection: document.getElementById("saved-designs-section"),
+  savedDesignsGrid: document.getElementById("saved-designs-grid"),
   inspirationGrid: document.getElementById("inspiration-grid"),
 };
 
@@ -927,49 +927,23 @@ function persistSaved(arr) {
   }
 }
 
+function createSavedDesignId() {
+  if (typeof crypto.randomUUID === "function") return crypto.randomUUID();
+  return `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+}
+
 function saveDesign() {
-  const name = el.designName.value.trim();
-  if (!name) {
-    el.designName.focus();
-    return;
-  }
   const arr = loadSaved();
-  const entry = {
-    name,
+  arr.push({
+    id: createSavedDesignId(),
     g: encodeGrid(),
     plate: state.plateColor,
     logo: state.logoColor,
     customColors: customColorValues(),
     savedAt: Date.now(),
-  };
-  const i = arr.findIndex((d) => d.name === name);
-  if (i >= 0) {
-    if (!confirm(`Replace saved design "${name}"?`)) return;
-    arr[i] = entry;
-  } else {
-    arr.push(entry);
-  }
+  });
   persistSaved(arr);
-  el.designName.value = "";
-  renderSavedList();
-}
-
-function loadDesign(name) {
-  const d = loadSaved().find((x) => x.name === name);
-  if (!d) return;
-  restoreCustomColors(d.customColors, d.custom);
-  applyGridString(d.g);
-  if (typeof d.plate === "string") state.plateColor = d.plate;
-  if (typeof d.logo === "string") state.logoColor = d.logo;
-  state.highlight = null;
-  state.lastModified = null;
-  state.arrowStart = null;
-  applyColors();
-  buildPalette();
-  repaintAll();
-  updateCounts();
-  save();
-  closeMenu();
+  renderSavedDesigns();
 }
 
 function designGridString(design) {
@@ -1109,6 +1083,44 @@ async function uploadDesignFile(file) {
   }
 }
 
+function createDesignCard(design, grid, ariaLabel) {
+  const card = document.createElement("button");
+  card.type = "button";
+  card.className = "inspiration-card";
+  card.setAttribute("aria-label", ariaLabel);
+  card.addEventListener("click", () => applyDesignData(design, grid));
+
+  const preview = document.createElement("div");
+  preview.className = "inspiration-preview";
+  preview.style.setProperty("--preview-plate", design.plate || "#000000");
+  preview.style.setProperty("--preview-logo", design.logo || "#ffffff");
+  const logo = document.createElement("span");
+  logo.setAttribute("aria-hidden", "true");
+  logo.className = "inspiration-logo";
+  const dotGrid = document.createElement("span");
+  dotGrid.setAttribute("aria-hidden", "true");
+  dotGrid.className = "inspiration-dot-grid";
+  const designCustomColors = getDesignCustomColors(design);
+  const previewColors = [
+    ...colors.slice(0, BUILT_IN_COLOR_COUNT).map((color) => color.color),
+    ...designCustomColors,
+  ];
+  for (let c = 0; c < cols; c++) {
+    for (let r = 0; r < rows; r++) {
+      const index = grid[r * cols + c];
+      const dot = document.createElement("span");
+      dot.className = "inspiration-dot";
+      if (index !== null && previewColors[index]) {
+        dot.style.background = previewColors[index];
+      }
+      dotGrid.appendChild(dot);
+    }
+  }
+  preview.append(logo, dotGrid);
+  card.appendChild(preview);
+  return card;
+}
+
 function renderInspiration(designs) {
   el.inspirationGrid.innerHTML = "";
   if (!designs.length) {
@@ -1120,45 +1132,13 @@ function renderInspiration(designs) {
   designs.forEach((design) => {
     const grid = designGridString(design);
     if (!grid) return;
-    const card = document.createElement("button");
-    card.type = "button";
-    card.className = "inspiration-card";
-    card.setAttribute(
-      "aria-label",
-      `Use ${design.name || "inspirational"} design`
+    el.inspirationGrid.appendChild(
+      createDesignCard(
+        design,
+        grid,
+        `Use ${design.name || "inspirational"} design`
+      )
     );
-    card.addEventListener("click", () => applyDesignData(design, grid));
-
-    const preview = document.createElement("div");
-    preview.className = "inspiration-preview";
-    preview.style.setProperty("--preview-plate", design.plate || "#000000");
-    preview.style.setProperty("--preview-logo", design.logo || "#ffffff");
-    const logo = document.createElement("span");
-    logo.setAttribute("aria-hidden", "true");
-    logo.className = "inspiration-logo";
-    const dotGrid = document.createElement("span");
-    dotGrid.setAttribute("aria-hidden", "true");
-    dotGrid.className = "inspiration-dot-grid";
-    const designCustomColors = getDesignCustomColors(design);
-    const previewColors = [
-      ...colors.slice(0, BUILT_IN_COLOR_COUNT).map((color) => color.color),
-      ...designCustomColors,
-    ];
-    for (let c = 0; c < cols; c++) {
-      for (let r = 0; r < rows; r++) {
-        const index = grid[r * cols + c];
-        const dot = document.createElement("span");
-        dot.className = "inspiration-dot";
-        if (index !== null && previewColors[index]) {
-          dot.style.background = previewColors[index];
-        }
-        dotGrid.appendChild(dot);
-      }
-    }
-    preview.append(logo, dotGrid);
-
-    card.appendChild(preview);
-    el.inspirationGrid.appendChild(card);
   });
 }
 
@@ -1181,45 +1161,55 @@ async function loadInspiration() {
   }
 }
 
-function deleteDesign(name) {
-  persistSaved(loadSaved().filter((x) => x.name !== name));
-  renderSavedList();
+function sameSavedDesign(left, right) {
+  if (left.id && right.id) return left.id === right.id;
+  return (
+    left.savedAt === right.savedAt &&
+    left.name === right.name &&
+    JSON.stringify(left.g) === JSON.stringify(right.g)
+  );
 }
 
-function renderSavedList() {
-  const arr = loadSaved().sort((a, b) => (b.savedAt || 0) - (a.savedAt || 0));
-  el.savedList.innerHTML = "";
-  if (!arr.length) {
-    const li = document.createElement("li");
-    li.className = "saved-empty";
-    li.textContent = "No saved designs yet.";
-    el.savedList.appendChild(li);
-    return;
-  }
-  for (const d of arr) {
-    const li = document.createElement("li");
-    li.className = "saved-item";
+function deleteDesign(design) {
+  const designs = loadSaved();
+  const index = designs.findIndex((entry) => sameSavedDesign(entry, design));
+  if (index < 0) return;
+  designs.splice(index, 1);
+  persistSaved(designs);
+  renderSavedDesigns();
+}
 
-    const loadBtn = document.createElement("button");
-    loadBtn.type = "button";
-    loadBtn.className = "saved-load";
-    loadBtn.textContent = d.name;
-    loadBtn.title = `Load "${d.name}"`;
-    loadBtn.addEventListener("click", () => loadDesign(d.name));
+function renderSavedDesigns() {
+  const designs = loadSaved().sort(
+    (a, b) => (b.savedAt || 0) - (a.savedAt || 0)
+  );
+  el.savedDesignsGrid.innerHTML = "";
+  for (const design of designs) {
+    const grid = designGridString(design);
+    if (!grid) continue;
 
-    const delBtn = document.createElement("button");
-    delBtn.type = "button";
-    delBtn.className = "saved-delete";
-    delBtn.setAttribute("aria-label", `Delete ${d.name}`);
-    delBtn.title = `Delete "${d.name}"`;
-    delBtn.textContent = "×";
-    delBtn.addEventListener("click", () => {
-      if (confirm(`Delete saved design "${d.name}"?`)) deleteDesign(d.name);
+    const item = document.createElement("div");
+    item.className = "saved-design-item";
+    item.appendChild(createDesignCard(design, grid, "Load saved design"));
+
+    const deleteButton = document.createElement("button");
+    deleteButton.type = "button";
+    deleteButton.className = "saved-design-delete";
+    deleteButton.setAttribute("aria-label", "Delete saved design");
+    deleteButton.title = "Delete saved design";
+    deleteButton.textContent = "×";
+    deleteButton.addEventListener("click", () => {
+      if (confirm("Delete this saved design?")) deleteDesign(design);
     });
-
-    li.append(loadBtn, delBtn);
-    el.savedList.appendChild(li);
+    item.appendChild(deleteButton);
+    el.savedDesignsGrid.appendChild(item);
   }
+  const hasSavedDesigns = el.savedDesignsGrid.childElementCount > 0;
+  el.savedDesignsSection.classList.toggle(
+    "has-saved-designs",
+    hasSavedDesigns
+  );
+  el.savedDesignsGrid.hidden = !hasSavedDesigns;
 }
 
 function init() {
@@ -1261,9 +1251,9 @@ function init() {
   el.zoomOut.addEventListener("click", () => setZoom(state.zoom - ZOOM_STEP));
   setZoom(state.zoom, false); // initialize label + button disabled states
 
-  // Side menu (drawer)
-  renderSavedList();
+  renderSavedDesigns();
   loadInspiration();
+  // Side menu (drawer)
   el.menuBtn.addEventListener("click", toggleMenu);
   el.drawerClose.addEventListener("click", closeMenu);
   el.drawerOverlay.addEventListener("click", closeMenu);
@@ -1289,12 +1279,6 @@ function init() {
   });
   setTextAlign(state.textAlign);
   el.saveDesignBtn.addEventListener("click", saveDesign);
-  el.designName.addEventListener("keydown", (e) => {
-    if (e.key === "Enter") {
-      e.preventDefault();
-      saveDesign();
-    }
-  });
   // Escape closes the drawer even while a menu input is focused (the color
   // shortcut handler ignores keys typed into inputs, so add a dedicated one).
   document.addEventListener("keydown", (e) => {

@@ -220,10 +220,35 @@
         </div>
       </section>
 
+      <section
+        class="inspiration-section saved-designs-section"
+        id="saved-designs-section"
+        aria-labelledby="saved-designs-title"
+      >
+        <div class="section-heading">
+          <h2 id="saved-designs-title">My Designs</h2>
+        </div>
+        <div class="saved-design-actions">
+          <button type="button" id="save-design" class="save-design-button">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M12 5v14" />
+              <path d="M5 12h14" />
+            </svg>
+            <span>Add</span>
+          </button>
+        </div>
+        <div
+          class="inspiration-grid"
+          id="saved-designs-grid"
+          aria-label="My designs"
+          hidden
+        ></div>
+      </section>
+
       <section class="inspiration-section" aria-labelledby="inspiration-title">
         <div class="section-heading">
           <h2 id="inspiration-title">Inspiration</h2>
-          <p>Start with an example, then make it your own.</p>
+          <p>Start with an example, then make it your own. 🚀</p>
         </div>
         <div class="inspiration-grid" id="inspiration-grid">
           <p class="inspiration-status">Loading examples...</p>
@@ -258,23 +283,6 @@
             Press <kbd>Space</kbd> or <kbd>Enter</kbd> to insert/remove.<br />
             Press <kbd>Tab</kbd> to switch colors.
           </p>
-        </section>
-
-        <section class="drawer-section">
-          <h3>Saved designs</h3>
-          <div class="drawer-row">
-            <input
-              type="text"
-              id="design-name"
-              class="drawer-input"
-              placeholder="Name this design"
-              autocomplete="off"
-            />
-            <button type="button" id="save-design" class="menu-btn-primary">
-              Save
-            </button>
-          </div>
-          <ul class="saved-list" id="saved-list"></ul>
         </section>
 
         <section class="drawer-section">
