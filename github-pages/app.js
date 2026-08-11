@@ -88,6 +88,7 @@ const state = {
   arrowStart: null, // { row, col } — set on Escape; overrides arrow-nav start
   zoom: isMobileZoomMode() ? DEFAULT_MOBILE_ZOOMS[zoomOrientation()] : 1,
   zooms: { ...DEFAULT_MOBILE_ZOOMS },
+  textValue: "",
   textSize: "regular", // letter width for the write-a-word tool
   textAlign: "left",
 };
@@ -569,6 +570,7 @@ function save() {
         active: state.active,
         plate: state.plateColor,
         logo: state.logoColor,
+        text: state.textValue,
         textSize: state.textSize,
         textAlign: state.textAlign,
         zooms: state.zooms,
@@ -595,6 +597,7 @@ function load() {
     state.active = data.active;
   if (typeof data.plate === "string") state.plateColor = data.plate;
   if (typeof data.logo === "string") state.logoColor = data.logo;
+  if (typeof data.text === "string") state.textValue = data.text;
   if (data.zooms && typeof data.zooms === "object") {
     state.zooms.portrait = validZoom(
       data.zooms.portrait,
@@ -1260,6 +1263,8 @@ function init() {
   // Write-a-word tool (main screen): apply live, debounced as the user types.
   let textDebounce = null;
   el.textInput.addEventListener("input", () => {
+    state.textValue = el.textInput.value;
+    save();
     clearTimeout(textDebounce);
     textDebounce = setTimeout(() => applyText(el.textInput.value), 300);
   });
@@ -1278,6 +1283,7 @@ function init() {
     button.addEventListener("click", () => setTextAlign(button.dataset.align));
   });
   setTextAlign(state.textAlign);
+  el.textInput.value = state.textValue;
   el.saveDesignBtn.addEventListener("click", saveDesign);
   // Escape closes the drawer even while a menu input is focused (the color
   // shortcut handler ignores keys typed into inputs, so add a dedicated one).
