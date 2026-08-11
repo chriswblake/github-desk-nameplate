@@ -24,8 +24,10 @@ A GitHub contribution graph themed desk nameplate.
    - Stand - horizontal part to hold nameplate
 1. Open `.3mf` file or load the `.stl` files into your slicing software.
 1. Print the parts. No special settings are required.
-1. Insert colored dots into the grid to spell your name or decorate! You can use the [nametag-planner.xlsx file](docs/nametag-planner.xlsx) to make your design.
-1. Share your design on the repo [Show and Tell](https://github.com/chriswblake/github-desk-nameplate/discussions/1) page!  
+1. Insert colored dots into the grid to spell your name or decorate!
+   > **💡 Tip:** You can use the [nameplate designer](https://chriswblake.github.io/github-desk-nameplate/) web app to try different ideas.
+  <a href="https://chriswblake.github.io/github-desk-nameplate/"><img width="350px" alt="screenshot of namplate designer" src="docs/designer-preview.png"></a>
+1. Share your design on this repo's [Show and Tell](https://github.com/chriswblake/github-desk-nameplate/discussions/1) page!  
 (and secretly your now even _more_ awesome desk setup)
 
 > [!TIP]
