@@ -38,6 +38,8 @@ A GitHub contribution graph themed desk nameplate.
 
 All files are available, including the original Fusion `.f3d` files. Pull requests are welcome.
 
+The nameplate designer is a [GitHub Pages](docs/github-pages.md) site. See the dedicated instructions for contributing to it.
+
 ### Easy contribution ideas
 
 - Alternative stands
