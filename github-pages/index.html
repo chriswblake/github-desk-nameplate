@@ -46,7 +46,7 @@
         </svg>
       </button>
       <h1>Nameplate Designer</h1>
-      <p class="subtitle">How much swagger can you earn?</p>
+      <p class="subtitle">How much swag can you show?</p>
       <div class="appearance-controls" aria-label="Nameplate controls">
         <label class="color-field header-color-field">
           <span>Plate</span>
@@ -82,35 +82,6 @@
           </button>
         </div>
       </div>
-      <div class="info-wrap" id="info-wrap">
-        <button
-          type="button"
-          class="info-btn"
-          id="info-btn"
-          aria-label="Instructions"
-          aria-expanded="false"
-          aria-controls="info-popover"
-        >
-          i
-        </button>
-        <div
-          class="info-popover"
-          id="info-popover"
-          role="dialog"
-          aria-label="Instructions"
-          hidden
-        >
-          <p>
-            Select a color, then tap a location to insert a colored dot. Tap it
-            again to remove the dot.
-          </p>
-          <p>
-            On desktop: use arrow keys to move.<br />
-            Press <kbd>Space</kbd> or <kbd>Enter</kbd> to insert/remove.<br />
-            Press <kbd>Tab</kbd> to switch colors.
-          </p>
-        </div>
-      </div>
     </header>
 
     <main>
@@ -129,26 +100,6 @@
       </section>
 
       <section class="toolbar" aria-label="Design settings">
-        <div class="toolbar-group zoom-control" aria-label="Nameplate size">
-          <button
-            type="button"
-            id="zoom-out"
-            class="zoom-btn"
-            aria-label="Smaller dots"
-          >
-            −
-          </button>
-          <span class="zoom-label" id="zoom-label">100%</span>
-          <button
-            type="button"
-            id="zoom-in"
-            class="zoom-btn"
-            aria-label="Larger dots"
-          >
-            +
-          </button>
-        </div>
-
         <div
           class="toolbar-group toolbar-colors"
           aria-label="Dot colors and shift controls"
@@ -247,6 +198,26 @@
             </button>
           </div>
         </div>
+
+        <div class="toolbar-group zoom-control" aria-label="Nameplate size">
+          <button
+            type="button"
+            id="zoom-out"
+            class="zoom-btn"
+            aria-label="Smaller dots"
+          >
+            −
+          </button>
+          <span class="zoom-label" id="zoom-label">100%</span>
+          <button
+            type="button"
+            id="zoom-in"
+            class="zoom-btn"
+            aria-label="Larger dots"
+          >
+            +
+          </button>
+        </div>
       </section>
 
       <section class="inspiration-section" aria-labelledby="inspiration-title">
@@ -276,6 +247,19 @@
       </div>
 
       <div class="drawer-body">
+        <section class="drawer-section drawer-instructions">
+          <h3>Instructions</h3>
+          <p>
+            Select a color, then tap a location to insert a colored dot. Tap it
+            again to remove the dot.
+          </p>
+          <p>
+            On desktop: use arrow keys to move.<br />
+            Press <kbd>Space</kbd> or <kbd>Enter</kbd> to insert/remove.<br />
+            Press <kbd>Tab</kbd> to switch colors.
+          </p>
+        </section>
+
         <section class="drawer-section">
           <h3>Saved designs</h3>
           <div class="drawer-row">

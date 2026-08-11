@@ -342,16 +342,25 @@ main {
 
 @media (max-width: 520px) {
   .app-header {
-    padding-bottom: 48px;
+    padding: 10px 12px 0;
   }
 
-  .app-header h1,
+  .app-header h1 {
+    padding: 2px 48px 0;
+    font-size: clamp(1.05rem, 5vw, 1.2rem);
+    text-align: center;
+    white-space: nowrap;
+  }
+
   .subtitle {
-    padding: 0 44px;
+    margin-top: 6px;
+    padding: 0;
   }
 
   .appearance-controls {
-    top: 54px;
+    position: static;
+    justify-content: center;
+    margin-top: 10px;
   }
 }
 
@@ -379,8 +388,10 @@ main {
 
 /* Compact square arrow buttons for the column-shift control. */
 .btn-arrange {
-  padding: 8px 12px;
-  min-width: 40px;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  min-width: 44px;
   line-height: 1;
 }
 
@@ -537,74 +548,6 @@ main {
   z-index: 10;
 }
 
-/* Info popover ---------------------------------------------------------- */
-/* Help sits beside the menu so appearance controls can occupy the top right. */
-.info-wrap {
-  position: absolute;
-  top: 16px;
-  left: 56px;
-  display: inline-flex;
-}
-
-.info-btn {
-  width: 30px;
-  height: 30px;
-  border-radius: 50%;
-  border: 1px solid var(--border);
-  background: var(--panel);
-  color: var(--muted);
-  font-weight: 700;
-  font-style: italic;
-  font-family: Georgia, "Times New Roman", serif;
-  cursor: pointer;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  line-height: 1;
-}
-
-.info-btn:hover {
-  color: var(--text);
-  border-color: var(--muted);
-}
-
-.info-popover {
-  position: absolute;
-  top: calc(100% + 8px);
-  left: 0;
-  width: min(320px, 80vw);
-  background: var(--panel);
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
-  padding: 12px 14px;
-  z-index: 20;
-  font-size: 0.85rem;
-  color: var(--text);
-}
-
-.info-popover p {
-  margin: 0 0 8px;
-}
-
-.info-popover p:last-child {
-  margin-bottom: 0;
-}
-
-/* On touch devices (any orientation) and narrow windows, show the info box as
-   a centered fixed modal so it can't overflow off-screen — the anchored bubble
-   would spill off the left edge because the info button sits near center. */
-@media (max-width: 640px), (hover: none) and (pointer: coarse) {
-  .info-popover {
-    position: fixed;
-    left: 50%;
-    top: 50%;
-    right: auto;
-    transform: translate(-50%, -50%);
-    width: min(340px, calc(100vw - 32px));
-  }
-}
-
 /* Hint ------------------------------------------------------------------ */
 .hint {
   color: var(--muted);
@@ -639,6 +582,7 @@ kbd {
 
 .stage {
   display: flex;
+  align-items: flex-start;
   justify-content: safe center;
   overflow-x: auto;
   overflow-y: hidden;
@@ -655,6 +599,10 @@ kbd {
 
 /* On phones, use nearly the full screen width for the nameplate. */
 @media (max-width: 640px) {
+  :root {
+    --plate-pad: 8px;
+  }
+
   .stage {
     padding-left: 5px;
     padding-right: 5px;
@@ -662,22 +610,94 @@ kbd {
 }
 
 /* Show the −/+ zoom control on touch devices in any orientation (portrait or
-   landscape phones exceed 640px wide when rotated) as well as narrow windows.
-   Floats at the bottom-left of the viewport, above the page content. */
+   landscape phones exceed 640px wide when rotated) as well as narrow windows. */
 @media (max-width: 640px), (hover: none) and (pointer: coarse) {
   .zoom-control {
     display: flex;
     align-items: center;
     gap: 10px;
-    position: fixed;
-    left: calc(10px + env(safe-area-inset-left, 0px));
-    bottom: calc(10px + env(safe-area-inset-bottom, 0px));
-    z-index: 40;
-    padding: 6px 8px;
-    border-radius: 12px;
-    background: var(--panel);
-    border: 1px solid var(--border);
-    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.18);
+  }
+}
+
+@media (max-width: 520px) {
+  .toolbar {
+    gap: 8px;
+    margin-top: -36px;
+    margin-bottom: 0;
+  }
+
+  .toolbar-colors {
+    display: grid;
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+    gap: var(--space-2) 8px;
+  }
+
+  .palette {
+    grid-column: 1 / -1;
+    grid-row: 1;
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+    gap: 8px;
+    max-width: none;
+  }
+
+  #shift-left {
+    grid-column: 3;
+    grid-row: 2;
+    width: 100%;
+  }
+
+  #shift-right {
+    grid-column: 4;
+    grid-row: 2;
+    width: 100%;
+  }
+
+  .toolbar-text {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    max-width: none;
+  }
+
+  .text-tool {
+    grid-column: 1 / -1;
+  }
+
+  .text-tool-input {
+    width: 100%;
+  }
+
+  .text-size {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .size-btn {
+    flex: 1 1 0;
+    padding-right: 10px;
+    padding-left: 10px;
+  }
+
+  .text-align {
+    width: auto;
+  }
+
+  .toolbar + .inspiration-section {
+    margin-top: 8px;
+  }
+}
+
+@media (max-width: 360px) {
+  .toolbar-text {
+    grid-template-columns: 1fr;
+  }
+
+  .text-size,
+  .text-align {
+    width: 100%;
+  }
+
+  .align-btn {
+    flex: 1 1 0;
   }
 }
 
@@ -949,6 +969,16 @@ kbd {
   text-transform: uppercase;
   letter-spacing: 0.04em;
   color: var(--muted);
+}
+
+.drawer-instructions p {
+  margin: 0 0 10px;
+  color: var(--muted);
+  font-size: 0.88rem;
+}
+
+.drawer-instructions p:last-child {
+  margin-bottom: 0;
 }
 
 .drawer-row {

@@ -37,6 +37,28 @@ const GAP_RATIO = 0.2;
 const ZOOM_MIN = 1;
 const ZOOM_MAX = 3;
 const ZOOM_STEP = 0.25;
+const DEFAULT_MOBILE_ZOOMS = {
+  portrait: 2.5,
+  landscape: 1,
+};
+const MOBILE_ZOOM_QUERY =
+  "(max-width: 640px), (hover: none) and (pointer: coarse)";
+
+function isMobileZoomMode() {
+  return window.matchMedia(MOBILE_ZOOM_QUERY).matches;
+}
+
+function zoomOrientation() {
+  return window.matchMedia("(orientation: portrait)").matches
+    ? "portrait"
+    : "landscape";
+}
+
+function validZoom(value, fallback) {
+  return Number.isFinite(value)
+    ? Math.max(ZOOM_MIN, Math.min(ZOOM_MAX, value))
+    : fallback;
+}
 
 // Path to the GitHub mark SVG. It is recolored to the logo color both
 // on-screen (via CSS mask) and in the exported image (below).
@@ -64,7 +86,8 @@ const state = {
   highlight: null, // { row, col } or null
   lastModified: null, // { row, col } — arrow nav starts here
   arrowStart: null, // { row, col } — set on Escape; overrides arrow-nav start
-  zoom: 1, // mobile size multiplier (see ZOOM_* constants)
+  zoom: isMobileZoomMode() ? DEFAULT_MOBILE_ZOOMS[zoomOrientation()] : 1,
+  zooms: { ...DEFAULT_MOBILE_ZOOMS },
   textSize: "regular", // letter width for the write-a-word tool
   textAlign: "left",
 };
@@ -88,9 +111,6 @@ const el = {
   shiftLeft: document.getElementById("shift-left"),
   shiftRight: document.getElementById("shift-right"),
   canvas: document.getElementById("export-canvas"),
-  infoBtn: document.getElementById("info-btn"),
-  infoPopover: document.getElementById("info-popover"),
-  infoWrap: document.getElementById("info-wrap"),
   zoomIn: document.getElementById("zoom-in"),
   zoomOut: document.getElementById("zoom-out"),
   zoomLabel: document.getElementById("zoom-label"),
@@ -335,9 +355,8 @@ function applyColors() {
   );
 }
 
-// Size the dots so the whole plate fits the available width. On desktop this
-// removes horizontal scrolling; on very narrow screens the cell is clamped to a
-// minimum and the stage scrolls instead.
+// Size the dots so the whole plate fits the available width. Mobile starts with
+// a complete overview; the zoom controls can then enlarge it for precise edits.
 function fitPlate() {
   const s = getComputedStyle(el.root);
   const pad = parseFloat(s.getPropertyValue("--plate-pad")) || 22;
@@ -356,15 +375,21 @@ function fitPlate() {
   const raw = (avail - 3 * pad) / (cellCount + gapCount * GAP_RATIO);
   // Fractional (not floored) so the plate fills the width exactly, leaving no
   // centering gap on the sides. The zoom multiplier can enlarge it further.
-  const cell = Math.max(10, Math.min(28, raw)) * state.zoom;
+  const fittedCell = Math.max(1, Math.min(28, raw));
+  const cell = fittedCell * state.zoom;
   el.root.style.setProperty("--cell", cell + "px");
   el.root.style.setProperty("--gap", cell * GAP_RATIO + "px");
+  el.stage.style.height = "";
 }
 
 // Change the mobile zoom and re-fit. The − button can't go below the natural
 // fit (1×); the + button grows the dots up to ZOOM_MAX.
-function setZoom(z) {
-  state.zoom = Math.max(ZOOM_MIN, Math.min(ZOOM_MAX, z));
+function setZoom(z, remember = true) {
+  state.zoom = validZoom(z, state.zoom);
+  if (remember && isMobileZoomMode()) {
+    state.zooms[zoomOrientation()] = state.zoom;
+    save();
+  }
   fitPlate();
   if (el.zoomLabel)
     el.zoomLabel.textContent = Math.round(state.zoom * 100) + "%";
@@ -402,24 +427,6 @@ function clearHighlight() {
   const { row, col } = state.highlight;
   state.highlight = null;
   paintCell(row, col);
-}
-
-/* --------------------------------------------------------------------- */
-/* Info popover                                                          */
-/* --------------------------------------------------------------------- */
-function showInfo() {
-  el.infoPopover.hidden = false;
-  el.infoBtn.setAttribute("aria-expanded", "true");
-}
-
-function hideInfo() {
-  el.infoPopover.hidden = true;
-  el.infoBtn.setAttribute("aria-expanded", "false");
-}
-
-function toggleInfo() {
-  if (el.infoPopover.hidden) showInfo();
-  else hideInfo();
 }
 
 function onKeyDown(e) {
@@ -564,6 +571,7 @@ function save() {
         logo: state.logoColor,
         textSize: state.textSize,
         textAlign: state.textAlign,
+        zooms: state.zooms,
         customColors: customColorValues(),
       })
     );
@@ -587,6 +595,17 @@ function load() {
     state.active = data.active;
   if (typeof data.plate === "string") state.plateColor = data.plate;
   if (typeof data.logo === "string") state.logoColor = data.logo;
+  if (data.zooms && typeof data.zooms === "object") {
+    state.zooms.portrait = validZoom(
+      data.zooms.portrait,
+      DEFAULT_MOBILE_ZOOMS.portrait
+    );
+    state.zooms.landscape = validZoom(
+      data.zooms.landscape,
+      DEFAULT_MOBILE_ZOOMS.landscape
+    );
+  }
+  if (isMobileZoomMode()) state.zoom = state.zooms[zoomOrientation()];
   const legacySizes = { small: "narrow", medium: "regular", large: "wide" };
   const textSize = legacySizes[data.textSize] || data.textSize;
   if (window.NameplateFont && window.NameplateFont.SIZES[textSize])
@@ -1238,10 +1257,9 @@ function init() {
   el.downloadDesign.addEventListener("click", downloadDesign);
   el.shiftLeft.addEventListener("click", () => shiftColumns(-1));
   el.shiftRight.addEventListener("click", () => shiftColumns(1));
-  el.infoBtn.addEventListener("click", toggleInfo);
   el.zoomIn.addEventListener("click", () => setZoom(state.zoom + ZOOM_STEP));
   el.zoomOut.addEventListener("click", () => setZoom(state.zoom - ZOOM_STEP));
-  setZoom(state.zoom); // initialize label + button disabled states
+  setZoom(state.zoom, false); // initialize label + button disabled states
 
   // Side menu (drawer)
   renderSavedList();
@@ -1284,14 +1302,28 @@ function init() {
   });
 
   document.addEventListener("keydown", onKeyDown);
-  window.addEventListener("resize", fitPlate);
-
-  // Any click deactivates the arrow-navigation highlight and closes the info
-  // popover when the click lands outside it.
-  document.addEventListener("click", (e) => {
-    clearHighlight();
-    if (!el.infoPopover.hidden && !el.infoWrap.contains(e.target)) hideInfo();
+  let mobileZoomMode = isMobileZoomMode();
+  let mobileZoomOrientation = zoomOrientation();
+  window.addEventListener("resize", () => {
+    const nextMobileZoomMode = isMobileZoomMode();
+    const nextZoomOrientation = zoomOrientation();
+    if (!nextMobileZoomMode) {
+      if (mobileZoomMode) setZoom(1, false);
+      else fitPlate();
+    } else if (
+      !mobileZoomMode ||
+      nextZoomOrientation !== mobileZoomOrientation
+    ) {
+      setZoom(state.zooms[nextZoomOrientation], false);
+    } else {
+      fitPlate();
+    }
+    mobileZoomMode = nextMobileZoomMode;
+    mobileZoomOrientation = nextZoomOrientation;
   });
+
+  // Any click deactivates the arrow-navigation highlight.
+  document.addEventListener("click", clearHighlight);
 }
 
 init();
