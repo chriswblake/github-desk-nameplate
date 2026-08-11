@@ -27,6 +27,7 @@ const STORAGE_KEY = "nameplate-planner-v1";
 // Separate store for designs saved from the main designer.
 const SAVED_KEY = "nameplate-saved-v1";
 const INSPIRATION_INDEX = "inspiration.json";
+const SUBTITLES_SRC = "subtitles.json";
 
 // Gap between dots as a fraction of the dot size, so spacing scales with the
 // nameplate as it resizes.
@@ -96,6 +97,7 @@ const state = {
 // DOM references
 const el = {
   root: document.documentElement,
+  subtitle: document.getElementById("subtitle"),
   grid: document.getElementById("grid"),
   logo: document.getElementById("logo"),
   palette: document.getElementById("palette"),
@@ -127,6 +129,27 @@ const el = {
 };
 
 const cellEls = []; // cellEls[r][c] -> button element
+
+async function loadSubtitle() {
+  try {
+    const response = await fetch(SUBTITLES_SRC);
+    if (!response.ok) throw new Error("Unable to load subtitles");
+    const subtitles = await response.json();
+    if (
+      !Array.isArray(subtitles) ||
+      !subtitles.length ||
+      subtitles.some((subtitle) => typeof subtitle !== "string" || !subtitle)
+    ) {
+      throw new Error("Invalid subtitles");
+    }
+    el.subtitle.textContent =
+      subtitles[Math.floor(Math.random() * subtitles.length)];
+  } catch (error) {
+    console.error(error);
+  } finally {
+    el.subtitle.classList.remove("subtitle-loading");
+  }
+}
 
 /* --------------------------------------------------------------------- */
 /* Build UI                                                              */
@@ -1216,6 +1239,7 @@ function renderSavedDesigns() {
 }
 
 function init() {
+  loadSubtitle();
   loadLogoSvg(); // warm the SVG so exports are instant
   load();
   buildGrid();

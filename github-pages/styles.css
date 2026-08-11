@@ -54,6 +54,10 @@ body {
   padding: 0 78px;
 }
 
+.subtitle-loading {
+  visibility: hidden;
+}
+
 main {
   max-width: 1100px;
   margin: 0 auto;
