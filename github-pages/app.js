@@ -98,6 +98,7 @@ const state = {
   textValue: "",
   textSize: "regular", // letter width for the write-a-word tool
   textAlign: "left",
+  showColumnNumbers: false,
 };
 
 // DOM references
@@ -107,6 +108,8 @@ const el = {
   grid: document.getElementById("grid"),
   logo: document.getElementById("logo"),
   palette: document.getElementById("palette"),
+  columnNumbers: document.getElementById("column-numbers"),
+  showColumnNumbers: document.getElementById("show-column-numbers"),
   customColor: document.getElementById("custom-color"),
   stage: document.getElementById("stage"),
   plateColor: document.getElementById("plate-color"),
@@ -162,8 +165,17 @@ async function loadSubtitle() {
 /* --------------------------------------------------------------------- */
 function buildGrid() {
   el.grid.innerHTML = "";
+  el.columnNumbers.innerHTML = "";
   cellEls.length = 0;
   for (let r = 0; r < rows; r++) cellEls.push(Array(cols).fill(null));
+
+  for (let column = 5; column <= cols; column += 5) {
+    const label = document.createElement("span");
+    label.className = "column-number";
+    label.textContent = String(column);
+    label.style.setProperty("--column", column);
+    el.columnNumbers.appendChild(label);
+  }
 
   // Column-major flow so the grid fills like a contribution graph.
   for (let c = 0; c < cols; c++) {
@@ -379,6 +391,7 @@ function applyColors() {
   // Empty dot locations are a dark overlay by default, which vanishes on a
   // dark plate. On dark plates, tint them lighter so they stay visible.
   const dark = luminance(state.plateColor) < 0.3;
+  el.root.style.setProperty("--plate-label-color", dark ? "#ffffff" : "#1f2328");
   el.root.style.setProperty(
     "--cell-bg",
     dark ? "rgba(255, 255, 255, 0.12)" : "rgba(0, 0, 0, 0.28)"
@@ -602,6 +615,7 @@ function save() {
         text: state.textValue,
         textSize: state.textSize,
         textAlign: state.textAlign,
+        showColumnNumbers: state.showColumnNumbers,
         zooms: state.zooms,
         customColors: customColorValues(),
       })
@@ -627,6 +641,8 @@ function load() {
   if (typeof data.plate === "string") state.plateColor = data.plate;
   if (typeof data.logo === "string") state.logoColor = data.logo;
   if (typeof data.text === "string") state.textValue = data.text;
+  if (typeof data.showColumnNumbers === "boolean")
+    state.showColumnNumbers = data.showColumnNumbers;
   if (data.zooms && typeof data.zooms === "object") {
     state.zooms.portrait = validZoom(
       data.zooms.portrait,
@@ -1452,6 +1468,8 @@ function init() {
   repaintAll();
   updateCounts();
   setActive(state.active);
+  el.columnNumbers.hidden = !state.showColumnNumbers;
+  el.showColumnNumbers.checked = state.showColumnNumbers;
 
   el.plateColor.addEventListener("input", (e) => {
     state.plateColor = e.target.value;
@@ -1467,6 +1485,11 @@ function init() {
     addCustomColor(e.target.value)
   );
   el.clearAll.addEventListener("click", clearAll);
+  el.showColumnNumbers.addEventListener("change", (event) => {
+    state.showColumnNumbers = event.target.checked;
+    el.columnNumbers.hidden = !state.showColumnNumbers;
+    save();
+  });
   el.uploadDesign.addEventListener("click", () => el.designFile.click());
   el.designFile.addEventListener("change", () => {
     const [file] = el.designFile.files;
