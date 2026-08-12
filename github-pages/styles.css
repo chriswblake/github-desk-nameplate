@@ -1,11 +1,4 @@
 :root {
-  --cell: 20px;
-  --gap: 4px;
-  --plate-pad: 22px;
-  --plate-color: #000000;
-  --plate-label-color: #ffffff;
-  --logo-color: #ffffff;
-  --cell-bg: rgba(255, 255, 255, 0.16);
   --bg: #f5f6f8;
   --panel: #ffffff;
   --border: #d0d7de;
@@ -604,10 +597,6 @@ kbd {
 
 /* On phones, use nearly the full screen width for the nameplate. */
 @media (max-width: 640px) {
-  :root {
-    --plate-pad: 8px;
-  }
-
   .stage {
     padding-left: 5px;
     padding-right: 5px;
@@ -711,10 +700,30 @@ kbd {
   display: none;
 }
 
-.plate {
+.nameplate {
+  --nameplate-cell: 20px;
+  --nameplate-gap: 4px;
+  --nameplate-pad: 22px;
+  --nameplate-logo-size: 164px;
+  --nameplate-grid-width: 1244px;
+  --nameplate-grid-height: 164px;
+  --nameplate-width: 1474px;
+  --nameplate-height: 208px;
+  --nameplate-radius: 16px;
+  --nameplate-cell-radius: 4px;
+  --nameplate-line: 1px;
+  --nameplate-highlight-inner: 2px;
+  --nameplate-highlight-outer: 4px;
+  --nameplate-plate-color: #000000;
+  --nameplate-label-color: #ffffff;
+  --nameplate-logo-color: #ffffff;
+  --nameplate-empty-color: rgba(255, 255, 255, 0.12);
   display: inline-flex;
+  flex: none;
   align-items: center;
-  gap: var(--plate-pad);
+  gap: var(--nameplate-pad);
+  width: var(--nameplate-width);
+  height: var(--nameplate-height);
   background:
     linear-gradient(
       160deg,
@@ -722,93 +731,130 @@ kbd {
       rgba(255, 255, 255, 0) 42%,
       rgba(0, 0, 0, 0.18)
     ),
-    var(--plate-color);
-  padding: var(--plate-pad);
-  border-radius: 16px;
-  min-width: min-content;
+    var(--nameplate-plate-color);
+  padding: var(--nameplate-pad);
+  border-radius: var(--nameplate-radius);
   box-shadow:
-    0 12px 30px rgba(0, 0, 0, 0.38),
-    0 2px 6px rgba(0, 0, 0, 0.25),
-    inset 0 1px 0 rgba(255, 255, 255, 0.08);
+    0 calc(var(--nameplate-cell) * 0.6)
+      calc(var(--nameplate-cell) * 1.5) rgba(0, 0, 0, 0.38),
+    0 calc(var(--nameplate-cell) * 0.1)
+      calc(var(--nameplate-cell) * 0.3) rgba(0, 0, 0, 0.25),
+    inset 0 var(--nameplate-line) 0 rgba(255, 255, 255, 0.08);
 }
 
-.logo {
-  width: calc(7 * var(--cell) + 6 * var(--gap));
-  height: calc(7 * var(--cell) + 6 * var(--gap));
-  flex: none;
-  background-color: var(--logo-color);
+.nameplate-no-shadow {
+  box-shadow:
+    inset 0 var(--nameplate-line) 0 rgba(255, 255, 255, 0.08);
+}
+
+.nameplate-logo {
+  width: var(--nameplate-logo-size);
+  height: var(--nameplate-logo-size);
+  flex: 0 0 auto;
+  background-color: var(--nameplate-logo-color);
   -webkit-mask: url("github-mark-white.svg") center / contain no-repeat;
   mask: url("github-mark-white.svg") center / contain no-repeat;
 }
 
-.grid-area {
+.nameplate-grid-area {
   position: relative;
+  flex: 0 0 auto;
+  width: var(--nameplate-grid-width);
+  height: var(--nameplate-grid-height);
 }
 
-.column-numbers {
+.nameplate-column-numbers {
   position: absolute;
   right: 0;
   bottom: 100%;
   left: 0;
   display: grid;
-  grid-template-columns: repeat(52, var(--cell));
-  grid-template-rows: var(--plate-pad);
-  column-gap: var(--gap);
-  height: var(--plate-pad);
-  color: var(--plate-label-color);
-  font-size: clamp(7px, calc(var(--cell) * 0.55), 12px);
+  grid-template-columns: repeat(52, var(--nameplate-cell));
+  grid-template-rows: var(--nameplate-pad);
+  column-gap: var(--nameplate-gap);
+  height: var(--nameplate-pad);
+  color: var(--nameplate-label-color);
+  font-size: calc(var(--nameplate-cell) * 0.55);
   font-weight: 700;
-  line-height: var(--plate-pad);
+  line-height: var(--nameplate-pad);
   font-variant-numeric: tabular-nums;
   pointer-events: none;
 }
 
-.column-numbers[hidden] {
+.nameplate-column-numbers[hidden] {
   display: none;
 }
 
-.column-number {
+.nameplate-column-number {
   grid-column: var(--column);
   grid-row: 1;
   justify-self: center;
 }
 
-.grid {
+.nameplate-grid {
   display: grid;
-  grid-template-rows: repeat(7, var(--cell));
+  width: var(--nameplate-grid-width);
+  height: var(--nameplate-grid-height);
+  grid-template-rows: repeat(7, var(--nameplate-cell));
   grid-auto-flow: column;
-  grid-auto-columns: var(--cell);
-  gap: var(--gap);
+  grid-auto-columns: var(--nameplate-cell);
+  gap: var(--nameplate-gap);
 }
 
-.cell {
-  width: var(--cell);
-  height: var(--cell);
-  border-radius: calc(var(--cell) * 0.2);
-  background: var(--cell-bg);
+.nameplate-cell {
+  display: block;
+  width: var(--nameplate-cell);
+  height: var(--nameplate-cell);
+  border-radius: var(--nameplate-cell-radius);
+  background: var(--nameplate-empty-color);
   box-shadow:
-    inset 1px 1px 2px rgba(0, 0, 0, 0.6),
-    inset -1px -1px 1px rgba(255, 255, 255, 0.12);
-  cursor: pointer;
+    inset var(--nameplate-line) var(--nameplate-line)
+      calc(var(--nameplate-line) * 2) rgba(0, 0, 0, 0.6),
+    inset calc(var(--nameplate-line) * -1)
+      calc(var(--nameplate-line) * -1) var(--nameplate-line)
+      rgba(255, 255, 255, 0.12);
   padding: 0;
   border: none;
 }
 
-.cell:hover { box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.5); }
-
-.cell:focus { outline: none; }
-
-.cell.filled {
-  box-shadow:
-    inset 0 calc(var(--cell) * 0.06) calc(var(--cell) * 0.06)
-      rgba(255, 255, 255, 0.22),
-    inset 0 calc(var(--cell) * -0.06) calc(var(--cell) * 0.06)
-      rgba(0, 0, 0, 0.28),
-    0 calc(var(--cell) * 0.03) calc(var(--cell) * 0.06) rgba(0, 0, 0, 0.3);
+.nameplate-cell:is(button) {
+  cursor: pointer;
 }
 
-.cell.highlight {
-  box-shadow: 0 0 0 2px #fff, 0 0 0 4px var(--accent);
+.nameplate-cell:is(button):hover {
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.5);
+}
+
+.nameplate-cell:focus { outline: none; }
+
+.nameplate-cell.filled {
+  box-shadow:
+    inset 0 calc(var(--nameplate-cell) * 0.06)
+      calc(var(--nameplate-cell) * 0.06)
+      rgba(255, 255, 255, 0.22),
+    inset 0 calc(var(--nameplate-cell) * -0.06)
+      calc(var(--nameplate-cell) * 0.06)
+      rgba(0, 0, 0, 0.28),
+    0 calc(var(--nameplate-cell) * 0.03)
+      calc(var(--nameplate-cell) * 0.06) rgba(0, 0, 0, 0.3);
+}
+
+.nameplate-cell.highlight {
+  box-shadow:
+    0 0 0 var(--nameplate-highlight-inner) #fff,
+    0 0 0 var(--nameplate-highlight-outer) var(--accent);
+}
+
+.nameplate-flat-cells .nameplate-cell {
+  box-shadow: none;
+}
+
+.nameplate-hide-empty .nameplate-cell:not(.filled) {
+  visibility: hidden;
+}
+
+.nameplate[aria-hidden="true"] {
+  pointer-events: none;
 }
 
 /* Inspiration ---------------------------------------------------------- */
@@ -847,6 +893,8 @@ kbd {
   border-radius: 8px;
   background: transparent;
   cursor: pointer;
+  content-visibility: auto;
+  contain-intrinsic-size: auto 50px;
 }
 
 .inspiration-card:focus-visible {
@@ -855,38 +903,10 @@ kbd {
 }
 
 .inspiration-preview {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 8px;
+  width: 100%;
+  overflow: hidden;
   border-radius: 8px;
-  background: var(--preview-plate, #000);
-}
-
-.inspiration-logo {
-  width: calc((100% - 6px) * 7 / 59);
-  aspect-ratio: 1;
-  flex: 0 0 auto;
-  background: var(--preview-logo, #fff);
-  -webkit-mask: url("github-mark-white.svg") center / contain no-repeat;
-  mask: url("github-mark-white.svg") center / contain no-repeat;
-}
-
-.inspiration-dot-grid {
-  display: grid;
-  grid-template-rows: repeat(7, auto);
-  grid-auto-flow: column;
-  grid-auto-columns: minmax(0, 1fr);
-  gap: 2px;
-  flex: 1 1 auto;
-  min-width: 0;
-}
-
-.inspiration-dot {
-  min-width: 0;
-  aspect-ratio: 1;
-  border-radius: 25%;
-  background: rgba(255, 255, 255, 0.12);
+  contain: layout paint;
 }
 
 .inspiration-status {

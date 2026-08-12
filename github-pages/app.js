@@ -35,18 +35,25 @@ const PNG_SIGNATURE = new Uint8Array([
 const UTF8_ENCODER = new TextEncoder();
 const UTF8_DECODER = new TextDecoder();
 
-// Gap between dots as a fraction of the dot size, so spacing scales with the
-// nameplate as it resizes.
-const GAP_RATIO = 0.2;
+// Every nameplate location uses this geometry. Measurements are ratios of one
+// cell so previews, the editor, zoomed views, and exports keep identical
+// proportions.
+const NAMEPLATE_LAYOUT = Object.freeze({
+  gapRatio: 0.2,
+  paddingRatio: 1.1,
+  plateRadiusRatio: 0.8,
+  cellRadiusRatio: 0.2,
+  maxFittedCell: 28,
+});
 
 // Mobile zoom: multiplies the auto-fitted dot size so the nameplate can be made
 // taller (larger dots), at the cost of earlier horizontal scrolling.
 const ZOOM_MIN = 1;
-const ZOOM_MAX = 3;
+const ZOOM_MAX = 6;
 const ZOOM_STEP = 0.25;
 const DEFAULT_MOBILE_ZOOMS = {
-  portrait: 2.5,
-  landscape: 1,
+  portrait: 4.75,
+  landscape: 2.25,
 };
 const MOBILE_ZOOM_QUERY =
   "(max-width: 640px), (hover: none) and (pointer: coarse)";
@@ -84,6 +91,179 @@ function loadLogoSvg() {
 const { rows, cols, colors } = CONFIG;
 const BUILT_IN_COLOR_COUNT = colors.length;
 
+function getNameplateMetrics(cell, { showLogo = true } = {}) {
+  const gap = cell * NAMEPLATE_LAYOUT.gapRatio;
+  const padding = cell * NAMEPLATE_LAYOUT.paddingRatio;
+  const gridHeight = rows * cell + (rows - 1) * gap;
+  const gridWidth = cols * cell + (cols - 1) * gap;
+  const logoSize = gridHeight;
+  return {
+    cell,
+    gap,
+    padding,
+    gridHeight,
+    gridWidth,
+    logoSize,
+    width:
+      padding * (showLogo ? 3 : 2) + (showLogo ? logoSize : 0) + gridWidth,
+    height: padding * 2 + gridHeight,
+    plateRadius: cell * NAMEPLATE_LAYOUT.plateRadiusRatio,
+    cellRadius: cell * NAMEPLATE_LAYOUT.cellRadiusRatio,
+  };
+}
+
+function setNameplateCellSize(plate, cell) {
+  const cellKey = cell.toFixed(4);
+  if (plate.dataset.nameplateCell === cellKey) return null;
+  plate.dataset.nameplateCell = cellKey;
+  const metrics = getNameplateMetrics(cell, {
+    showLogo: !plate.classList.contains("nameplate-no-logo"),
+  });
+  plate.style.setProperty("--nameplate-cell", `${metrics.cell}px`);
+  plate.style.setProperty("--nameplate-gap", `${metrics.gap}px`);
+  plate.style.setProperty("--nameplate-pad", `${metrics.padding}px`);
+  plate.style.setProperty("--nameplate-logo-size", `${metrics.logoSize}px`);
+  plate.style.setProperty("--nameplate-grid-width", `${metrics.gridWidth}px`);
+  plate.style.setProperty("--nameplate-grid-height", `${metrics.gridHeight}px`);
+  plate.style.setProperty("--nameplate-width", `${metrics.width}px`);
+  plate.style.setProperty("--nameplate-height", `${metrics.height}px`);
+  plate.style.setProperty("--nameplate-radius", `${metrics.plateRadius}px`);
+  plate.style.setProperty("--nameplate-cell-radius", `${metrics.cellRadius}px`);
+  plate.style.setProperty(
+    "--nameplate-line",
+    `${metrics.cell * 0.05}px`
+  );
+  plate.style.setProperty(
+    "--nameplate-highlight-inner",
+    `${metrics.cell * 0.1}px`
+  );
+  plate.style.setProperty(
+    "--nameplate-highlight-outer",
+    `${metrics.cell * 0.2}px`
+  );
+  return metrics;
+}
+
+function emptyCellColor(plateColor) {
+  return luminance(plateColor) < 0.3
+    ? "rgba(255, 255, 255, 0.12)"
+    : "rgba(0, 0, 0, 0.28)";
+}
+
+function setNameplateColors(plate, plateColor, logoColor) {
+  const dark = luminance(plateColor) < 0.3;
+  plate.style.setProperty("--nameplate-plate-color", plateColor);
+  plate.style.setProperty("--nameplate-logo-color", logoColor);
+  plate.style.setProperty(
+    "--nameplate-label-color",
+    dark ? "#ffffff" : "#1f2328"
+  );
+  plate.style.setProperty("--nameplate-empty-color", emptyCellColor(plateColor));
+}
+
+function gridValueAt(grid, row, column) {
+  return Array.isArray(grid[row])
+    ? grid[row][column]
+    : grid[row * cols + column];
+}
+
+function createNameplate({
+  grid,
+  palette,
+  plateColor = CONFIG.defaultPlateColor,
+  logoColor = CONFIG.defaultLogoColor,
+  interactive = false,
+  showColumnNumbers = false,
+  showEmptyCells = true,
+  showLogo = true,
+  showShadow = true,
+  showCellDepth = true,
+  decorative = false,
+  onCellClick = null,
+} = {}) {
+  const plate = document.createElement("div");
+  plate.className = "nameplate";
+  plate.classList.toggle("nameplate-no-logo", !showLogo);
+  plate.classList.toggle("nameplate-no-shadow", !showShadow);
+  plate.classList.toggle("nameplate-hide-empty", !showEmptyCells);
+  plate.classList.toggle("nameplate-flat-cells", !showCellDepth);
+  if (decorative) plate.setAttribute("aria-hidden", "true");
+  setNameplateCellSize(plate, 20);
+  setNameplateColors(plate, plateColor, logoColor);
+
+  if (showLogo) {
+    const logo = document.createElement("div");
+    logo.className = "nameplate-logo";
+    if (!decorative) {
+      logo.setAttribute("role", "img");
+      logo.setAttribute("aria-label", "GitHub logo");
+    }
+    plate.appendChild(logo);
+  }
+
+  const gridArea = document.createElement("div");
+  gridArea.className = "nameplate-grid-area";
+
+  let columnNumbers = null;
+  if (interactive || showColumnNumbers) {
+    columnNumbers = document.createElement("div");
+    columnNumbers.className = "nameplate-column-numbers";
+    columnNumbers.setAttribute("aria-hidden", "true");
+    columnNumbers.hidden = !showColumnNumbers;
+    for (let column = 5; column <= cols; column += 5) {
+      const label = document.createElement("span");
+      label.className = "nameplate-column-number";
+      label.textContent = String(column);
+      label.style.setProperty("--column", column);
+      columnNumbers.appendChild(label);
+    }
+    gridArea.appendChild(columnNumbers);
+  }
+
+  const gridElement = document.createElement("div");
+  gridElement.className = "nameplate-grid";
+  const cells = Array.from({ length: rows }, () => Array(cols).fill(null));
+  for (let column = 0; column < cols; column++) {
+    for (let row = 0; row < rows; row++) {
+      const value = gridValueAt(grid, row, column);
+      const cell = document.createElement(interactive ? "button" : "span");
+      cell.className = "nameplate-cell";
+      if (interactive) {
+        cell.type = "button";
+        cell.tabIndex = -1;
+        cell.dataset.r = String(row);
+        cell.dataset.c = String(column);
+        cell.setAttribute(
+          "aria-label",
+          `Row ${row + 1}, column ${column + 1}`
+        );
+        cell.addEventListener("click", () => onCellClick?.(row, column, cell));
+      } else {
+        cell.setAttribute("aria-hidden", "true");
+      }
+      if (value !== null && palette[value]) {
+        cell.classList.add("filled");
+        cell.style.background = palette[value];
+      }
+      cells[row][column] = cell;
+      gridElement.appendChild(cell);
+    }
+  }
+  gridArea.appendChild(gridElement);
+  plate.appendChild(gridArea);
+
+  return { plate, grid: gridElement, columnNumbers, cells };
+}
+
+function fitNameplateToWidth(plate, width, zoom = 1, maxCell = Infinity) {
+  if (!width || width <= 0) return null;
+  const widthUnits = getNameplateMetrics(1, {
+    showLogo: !plate.classList.contains("nameplate-no-logo"),
+  }).width;
+  const cell = Math.min(maxCell, width / widthUnits) * zoom;
+  return setNameplateCellSize(plate, Math.max(1, cell));
+}
+
 const state = {
   // grid[r][c] = color index (0..n-1) or null for empty
   grid: Array.from({ length: rows }, () => Array(cols).fill(null)),
@@ -103,12 +283,12 @@ const state = {
 
 // DOM references
 const el = {
-  root: document.documentElement,
   subtitle: document.getElementById("subtitle"),
-  grid: document.getElementById("grid"),
-  logo: document.getElementById("logo"),
+  nameplateHost: document.getElementById("nameplate-host"),
+  plate: null,
+  grid: null,
   palette: document.getElementById("palette"),
-  columnNumbers: document.getElementById("column-numbers"),
+  columnNumbers: null,
   showColumnNumbers: document.getElementById("show-column-numbers"),
   customColor: document.getElementById("custom-color"),
   stage: document.getElementById("stage"),
@@ -164,38 +344,24 @@ async function loadSubtitle() {
 /* Build UI                                                              */
 /* --------------------------------------------------------------------- */
 function buildGrid() {
-  el.grid.innerHTML = "";
-  el.columnNumbers.innerHTML = "";
   cellEls.length = 0;
-  for (let r = 0; r < rows; r++) cellEls.push(Array(cols).fill(null));
-
-  for (let column = 5; column <= cols; column += 5) {
-    const label = document.createElement("span");
-    label.className = "column-number";
-    label.textContent = String(column);
-    label.style.setProperty("--column", column);
-    el.columnNumbers.appendChild(label);
-  }
-
-  // Column-major flow so the grid fills like a contribution graph.
-  for (let c = 0; c < cols; c++) {
-    for (let r = 0; r < rows; r++) {
-      const btn = document.createElement("button");
-      btn.type = "button";
-      btn.className = "cell";
-      btn.tabIndex = -1;
-      btn.dataset.r = String(r);
-      btn.dataset.c = String(c);
-      btn.setAttribute("aria-label", `Row ${r + 1}, column ${c + 1}`);
-      // A click paints but never shows the arrow-navigation highlight.
-      btn.addEventListener("click", () => {
-        toggleCell(r, c, state.active);
-        btn.blur();
-      });
-      cellEls[r][c] = btn;
-      el.grid.appendChild(btn);
-    }
-  }
+  const rendered = createNameplate({
+    grid: state.grid,
+    palette: colors.map((color) => color.color),
+    plateColor: state.plateColor,
+    logoColor: state.logoColor,
+    interactive: true,
+    showColumnNumbers: state.showColumnNumbers,
+    onCellClick(row, column, cell) {
+      toggleCell(row, column, state.active);
+      cell.blur();
+    },
+  });
+  el.nameplateHost.replaceChildren(rendered.plate);
+  el.plate = rendered.plate;
+  el.grid = rendered.grid;
+  el.columnNumbers = rendered.columnNumbers;
+  for (const row of rendered.cells) cellEls.push(row);
 }
 
 function buildPalette() {
@@ -384,44 +550,24 @@ function updateCounts() {
 }
 
 function applyColors() {
-  el.root.style.setProperty("--plate-color", state.plateColor);
-  el.root.style.setProperty("--logo-color", state.logoColor);
+  setNameplateColors(el.plate, state.plateColor, state.logoColor);
   el.plateColor.value = state.plateColor;
   el.logoColor.value = state.logoColor;
-  // Empty dot locations are a dark overlay by default, which vanishes on a
-  // dark plate. On dark plates, tint them lighter so they stay visible.
-  const dark = luminance(state.plateColor) < 0.3;
-  el.root.style.setProperty("--plate-label-color", dark ? "#ffffff" : "#1f2328");
-  el.root.style.setProperty(
-    "--cell-bg",
-    dark ? "rgba(255, 255, 255, 0.12)" : "rgba(0, 0, 0, 0.28)"
-  );
 }
 
 // Size the dots so the whole plate fits the available width. Mobile starts with
 // a complete overview; the zoom controls can then enlarge it for precise edits.
 function fitPlate() {
-  const s = getComputedStyle(el.root);
-  const pad = parseFloat(s.getPropertyValue("--plate-pad")) || 22;
   const sp = getComputedStyle(el.stage);
   const stagePadX =
     (parseFloat(sp.paddingLeft) || 0) + (parseFloat(sp.paddingRight) || 0);
   const avail = el.stage.clientWidth - stagePadX;
-  if (!avail || avail <= 0) return;
-  // The gap between dots scales with the dot size (see GAP_RATIO).
-  // Across the width: 7 logo + 52 grid = 59 cells, 6 + 51 = 57 internal gaps,
-  // plus 3 plate paddings (left, middle, right). Solve for cell given that
-  // gap = cell * GAP_RATIO:
-  //   avail = 3*pad + cellCount*cell + gapCount*(cell*GAP_RATIO)
-  const cellCount = rows + cols;
-  const gapCount = rows - 1 + (cols - 1);
-  const raw = (avail - 3 * pad) / (cellCount + gapCount * GAP_RATIO);
-  // Fractional (not floored) so the plate fills the width exactly, leaving no
-  // centering gap on the sides. The zoom multiplier can enlarge it further.
-  const fittedCell = Math.max(1, Math.min(28, raw));
-  const cell = fittedCell * state.zoom;
-  el.root.style.setProperty("--cell", cell + "px");
-  el.root.style.setProperty("--gap", cell * GAP_RATIO + "px");
+  fitNameplateToWidth(
+    el.plate,
+    avail,
+    state.zoom,
+    NAMEPLATE_LAYOUT.maxFittedCell
+  );
   el.stage.style.height = "";
 }
 
@@ -798,34 +944,40 @@ async function downloadImage() {
 
   const scale = 2;
   const cell = 24;
-  const gap = 4;
-  const pad = 28;
+  const metrics = getNameplateMetrics(cell);
+  const exportWidth = Math.ceil(metrics.width);
+  const exportHeight = Math.ceil(metrics.height);
 
-  const gridH = rows * cell + (rows - 1) * gap;
-  const gridW = cols * cell + (cols - 1) * gap;
-  const logoD = gridH;
-  const plateW = pad + logoD + pad + gridW + pad;
-  const plateH = pad + gridH + pad;
-
-  const { canvas, ctx } = prepareExportCanvas(plateW, plateH, scale);
+  const { canvas, ctx } = prepareExportCanvas(
+    exportWidth,
+    exportHeight,
+    scale
+  );
 
   ctx.fillStyle = state.plateColor;
-  roundRect(ctx, 0, 0, plateW, plateH, 18);
+  roundRect(ctx, 0, 0, exportWidth, exportHeight, metrics.plateRadius);
   ctx.fill();
 
-  const gx = pad + logoD + pad;
-  const gy = pad;
+  const gx = metrics.padding + metrics.logoSize + metrics.padding;
+  const gy = metrics.padding;
   for (let r = 0; r < rows; r++)
     for (let c = 0; c < cols; c++) {
-      const x = gx + c * (cell + gap);
-      const y = gy + r * (cell + gap);
+      const x = gx + c * (cell + metrics.gap);
+      const y = gy + r * (cell + metrics.gap);
       const v = state.grid[r][c];
-      ctx.fillStyle = v === null ? "rgba(255,255,255,0.06)" : colors[v].color;
-      roundRect(ctx, x, y, cell, cell, 5);
+      ctx.fillStyle =
+        v === null ? emptyCellColor(state.plateColor) : colors[v].color;
+      roundRect(ctx, x, y, cell, cell, metrics.cellRadius);
       ctx.fill();
     }
 
-  await drawLogoOnCanvas(ctx, pad, pad, logoD);
+  await drawLogoOnCanvas(
+    ctx,
+    metrics.padding,
+    metrics.padding,
+    metrics.logoSize,
+    state.logoColor
+  );
   try {
     const blob = await canvasToPngBlob(canvas);
     const png = embedDesignInPng(
@@ -912,10 +1064,10 @@ function downloadDesign() {
   downloadBlob(blob, "nameplate-design.json");
 }
 
-function drawLogoOnCanvas(ctx, x, y, size) {
+function drawLogoOnCanvas(ctx, x, y, size, logoColor) {
   return loadLogoSvg().then((svg) => {
     if (!svg) return;
-    const colored = svg.replace(/fill="white"/g, `fill="${state.logoColor}"`);
+    const colored = svg.replace(/fill="white"/g, `fill="${logoColor}"`);
     const url =
       "data:image/svg+xml;charset=utf-8," + encodeURIComponent(colored);
     return new Promise((resolve) => {
@@ -1337,33 +1489,45 @@ function createDesignCard(design, grid, ariaLabel) {
 
   const preview = document.createElement("div");
   preview.className = "inspiration-preview";
-  preview.style.setProperty("--preview-plate", design.plate || "#000000");
-  preview.style.setProperty("--preview-logo", design.logo || "#ffffff");
-  const logo = document.createElement("span");
-  logo.setAttribute("aria-hidden", "true");
-  logo.className = "inspiration-logo";
-  const dotGrid = document.createElement("span");
-  dotGrid.setAttribute("aria-hidden", "true");
-  dotGrid.className = "inspiration-dot-grid";
   const designCustomColors = getDesignCustomColors(design);
   const previewColors = [
     ...colors.slice(0, BUILT_IN_COLOR_COUNT).map((color) => color.color),
     ...designCustomColors,
   ];
-  for (let c = 0; c < cols; c++) {
-    for (let r = 0; r < rows; r++) {
-      const index = grid[r * cols + c];
-      const dot = document.createElement("span");
-      dot.className = "inspiration-dot";
-      if (index !== null && previewColors[index]) {
-        dot.style.background = previewColors[index];
-      }
-      dotGrid.appendChild(dot);
-    }
-  }
-  preview.append(logo, dotGrid);
+  const rendered = createNameplate({
+    grid,
+    palette: previewColors,
+    plateColor: design.plate || CONFIG.defaultPlateColor,
+    logoColor: design.logo || CONFIG.defaultLogoColor,
+    showShadow: false,
+    showCellDepth: false,
+    decorative: true,
+  });
+  preview.appendChild(rendered.plate);
   card.appendChild(preview);
   return card;
+}
+
+function fitNameplatePreviews(root = document) {
+  const previews = [...root.querySelectorAll(".inspiration-preview")]
+    .map((preview) => ({
+      plate: preview.querySelector(".nameplate"),
+      width: preview.clientWidth,
+    }))
+    .filter(({ plate }) => plate);
+  for (const { plate, width } of previews)
+    fitNameplateToWidth(plate, width);
+}
+
+let layoutFitFrame = null;
+
+function scheduleLayoutFit() {
+  if (layoutFitFrame !== null) return;
+  layoutFitFrame = requestAnimationFrame(() => {
+    layoutFitFrame = null;
+    fitPlate();
+    fitNameplatePreviews();
+  });
 }
 
 function renderInspiration(designs) {
@@ -1385,6 +1549,7 @@ function renderInspiration(designs) {
       )
     );
   });
+  fitNameplatePreviews(el.inspirationGrid);
 }
 
 async function loadInspiration() {
@@ -1455,6 +1620,7 @@ function renderSavedDesigns() {
     hasSavedDesigns
   );
   el.savedDesignsGrid.hidden = !hasSavedDesigns;
+  fitNameplatePreviews(el.savedDesignsGrid);
 }
 
 function init() {
@@ -1549,15 +1715,13 @@ function init() {
     const nextZoomOrientation = zoomOrientation();
     if (!nextMobileZoomMode) {
       if (mobileZoomMode) setZoom(1, false);
-      else fitPlate();
     } else if (
       !mobileZoomMode ||
       nextZoomOrientation !== mobileZoomOrientation
     ) {
       setZoom(state.zooms[nextZoomOrientation], false);
-    } else {
-      fitPlate();
     }
+    scheduleLayoutFit();
     mobileZoomMode = nextMobileZoomMode;
     mobileZoomOrientation = nextZoomOrientation;
   });
