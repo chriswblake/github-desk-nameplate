@@ -1,0 +1,35 @@
+{
+  "name": "github-desk-nameplate",
+  "image": "mcr.microsoft.com/devcontainers/base:jammy",
+
+  "features": {
+    // Languages
+    "ghcr.io/devcontainers/features/node:2": {
+      "version": "24",
+      "npmVersion": "lts"
+    },
+    "ghcr.io/devcontainers/features/python:1": {
+      "installTools": true,
+      "optimize": true,
+      "version": "3.13"
+    },
+
+    // Tooling
+    "ghcr.io/devcontainers/features/github-cli:1": {
+      "version": "latest"
+    },
+    "ghcr.io/devcontainers/features/copilot-cli:1": {
+      "version": "latest"
+    }
+  },
+  
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "ms-python.python",
+        "esbenp.prettier-vscode",
+        "yahyabatulu.vscode-markdown-alert"
+      ]
+    }
+  }
+}
