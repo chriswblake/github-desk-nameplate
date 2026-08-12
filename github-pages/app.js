@@ -52,8 +52,8 @@ const ZOOM_MIN = 1;
 const ZOOM_MAX = 6;
 const ZOOM_STEP = 0.25;
 const DEFAULT_MOBILE_ZOOMS = {
-  portrait: 4.75,
-  landscape: 2.25,
+  portrait: 2.00,
+  landscape: 1.00,
 };
 const MOBILE_ZOOM_QUERY =
   "(max-width: 640px), (hover: none) and (pointer: coarse)";
