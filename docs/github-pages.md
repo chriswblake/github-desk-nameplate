@@ -20,7 +20,8 @@ as one JSON file per design.
 - Add each filename to
 [`github-pages/inspiration.json`](../github-pages/inspiration.json) so the
 planner can discover and display it.
-- Downloaded design files (json) from the designer use this same format and can be directly placed in the inspiration directory.
+- Downloaded designs (json) use this same format and can be directly placed in the inspiration directory.
+- Downloaded design PNGs include the embededd JSON design data. They can also uploaded back into the designer.
 - The `grid` property contains seven 52-character rows:
     - `.` is an empty spot in the grid
     - `r` red,

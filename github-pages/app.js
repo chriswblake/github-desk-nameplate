@@ -28,6 +28,12 @@ const STORAGE_KEY = "nameplate-planner-v1";
 const SAVED_KEY = "nameplate-saved-v1";
 const INSPIRATION_INDEX = "inspiration.json";
 const SUBTITLES_SRC = "subtitles.json";
+const PNG_DESIGN_KEYWORD = "NameplateDesign";
+const PNG_SIGNATURE = new Uint8Array([
+  0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a,
+]);
+const UTF8_ENCODER = new TextEncoder();
+const UTF8_DECODER = new TextDecoder();
 
 // Gap between dots as a fraction of the dot size, so spacing scales with the
 // nameplate as it resizes.
@@ -659,7 +665,121 @@ function downloadCanvas(canvas, filename) {
   link.click();
 }
 
+function downloadBlob(blob, filename) {
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.download = filename;
+  link.href = url;
+  link.click();
+  setTimeout(() => URL.revokeObjectURL(url), 0);
+}
+
+function canvasToPngBlob(canvas) {
+  return new Promise((resolve, reject) => {
+    canvas.toBlob((blob) => {
+      if (blob) resolve(blob);
+      else reject(new Error("The image could not be created."));
+    }, "image/png");
+  });
+}
+
+function hasPngSignature(bytes) {
+  return (
+    bytes.length >= PNG_SIGNATURE.length &&
+    PNG_SIGNATURE.every((value, index) => bytes[index] === value)
+  );
+}
+
+function readUint32(bytes, offset) {
+  return new DataView(
+    bytes.buffer,
+    bytes.byteOffset + offset,
+    4
+  ).getUint32(0);
+}
+
+let pngCrcTable = null;
+
+function pngCrc32(bytes) {
+  if (!pngCrcTable) {
+    pngCrcTable = new Uint32Array(256);
+    for (let n = 0; n < pngCrcTable.length; n++) {
+      let value = n;
+      for (let bit = 0; bit < 8; bit++) {
+        value = value & 1 ? 0xedb88320 ^ (value >>> 1) : value >>> 1;
+      }
+      pngCrcTable[n] = value >>> 0;
+    }
+  }
+
+  let crc = 0xffffffff;
+  for (const byte of bytes) {
+    crc = pngCrcTable[(crc ^ byte) & 0xff] ^ (crc >>> 8);
+  }
+  return (crc ^ 0xffffffff) >>> 0;
+}
+
+function createPngChunk(type, data) {
+  const typeBytes = UTF8_ENCODER.encode(type);
+  const chunk = new Uint8Array(12 + data.length);
+  const view = new DataView(chunk.buffer);
+  view.setUint32(0, data.length);
+  chunk.set(typeBytes, 4);
+  chunk.set(data, 8);
+
+  const crcInput = new Uint8Array(typeBytes.length + data.length);
+  crcInput.set(typeBytes);
+  crcInput.set(data, typeBytes.length);
+  view.setUint32(8 + data.length, pngCrc32(crcInput));
+  return chunk;
+}
+
+function createDesignPngChunk(design) {
+  const keyword = UTF8_ENCODER.encode(PNG_DESIGN_KEYWORD);
+  const json = UTF8_ENCODER.encode(JSON.stringify(design));
+  const data = new Uint8Array(keyword.length + 5 + json.length);
+  data.set(keyword);
+
+  let offset = keyword.length + 1;
+  data[offset++] = 0; // Uncompressed iTXt.
+  data[offset++] = 0;
+  data[offset++] = 0; // Empty language tag.
+  data[offset++] = 0; // Empty translated keyword.
+  data.set(json, offset);
+  return createPngChunk("iTXt", data);
+}
+
+function embedDesignInPng(bytes, design) {
+  if (!hasPngSignature(bytes)) throw new Error("The exported PNG is invalid.");
+
+  let offset = PNG_SIGNATURE.length;
+  while (offset + 12 <= bytes.length) {
+    const length = readUint32(bytes, offset);
+    const chunkEnd = offset + 12 + length;
+    if (chunkEnd > bytes.length) throw new Error("The exported PNG is invalid.");
+
+    const type = String.fromCharCode(...bytes.subarray(offset + 4, offset + 8));
+    if (type === "IEND") {
+      const metadata = createDesignPngChunk(design);
+      const result = new Uint8Array(bytes.length + metadata.length);
+      result.set(bytes.subarray(0, offset));
+      result.set(metadata, offset);
+      result.set(bytes.subarray(offset), offset + metadata.length);
+      return result;
+    }
+    offset = chunkEnd;
+  }
+
+  throw new Error("The exported PNG is missing its end marker.");
+}
+
 async function downloadImage() {
+  const design = createDownloadDesign();
+  if (!design) {
+    alert("Design downloads support up to 35 custom colors.");
+    return;
+  }
+
   const scale = 2;
   const cell = 24;
   const gap = 4;
@@ -690,7 +810,18 @@ async function downloadImage() {
     }
 
   await drawLogoOnCanvas(ctx, pad, pad, logoD);
-  downloadCanvas(canvas, "nameplate.png");
+  try {
+    const blob = await canvasToPngBlob(canvas);
+    const png = embedDesignInPng(
+      new Uint8Array(await blob.arrayBuffer()),
+      design
+    );
+    downloadBlob(new Blob([png], { type: "image/png" }), "nameplate.png");
+  } catch (error) {
+    const message =
+      error instanceof Error ? error.message : "The image could not be created.";
+    alert(`Could not download design: ${message}`);
+  }
 }
 
 function downloadCounts() {
@@ -737,12 +868,10 @@ function downloadCounts() {
   downloadCanvas(canvas, "nameplate-counts.png");
 }
 
-function downloadDesign() {
+function createDownloadDesign() {
   const grid = encodeDesignGrid();
-  if (!grid) {
-    alert("Design downloads support up to 35 custom colors.");
-    return;
-  }
+  if (!grid) return null;
+
   const design = {
     name: "nameplate-design",
     plate: state.plateColor,
@@ -751,15 +880,20 @@ function downloadDesign() {
   };
   const customColors = customColorValues();
   if (customColors.length) design.customColors = customColors;
+  return design;
+}
+
+function downloadDesign() {
+  const design = createDownloadDesign();
+  if (!design) {
+    alert("Design downloads support up to 35 custom colors.");
+    return;
+  }
+
   const blob = new Blob([JSON.stringify(design, null, 2) + "\n"], {
     type: "application/json",
   });
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement("a");
-  link.download = "nameplate-design.json";
-  link.href = url;
-  link.click();
-  setTimeout(() => URL.revokeObjectURL(url), 0);
+  downloadBlob(blob, "nameplate-design.json");
 }
 
 function drawLogoOnCanvas(ctx, x, y, size) {
@@ -1094,9 +1228,78 @@ function validateUploadedDesign(design) {
   return grid;
 }
 
+function findNullByte(bytes, start, end) {
+  for (let offset = start; offset < end; offset++) {
+    if (bytes[offset] === 0) return offset;
+  }
+  return -1;
+}
+
+function readDesignPngChunk(data) {
+  const keywordEnd = findNullByte(data, 0, data.length);
+  if (keywordEnd < 0) return null;
+
+  const keyword = UTF8_DECODER.decode(data.subarray(0, keywordEnd));
+  if (keyword !== PNG_DESIGN_KEYWORD) return null;
+
+  const compressionFlagOffset = keywordEnd + 1;
+  if (compressionFlagOffset + 4 > data.length)
+    throw new Error("The embedded design metadata is invalid.");
+  if (data[compressionFlagOffset] !== 0)
+    throw new Error("The embedded design metadata is compressed.");
+
+  const languageEnd = findNullByte(
+    data,
+    compressionFlagOffset + 2,
+    data.length
+  );
+  if (languageEnd < 0)
+    throw new Error("The embedded design metadata is invalid.");
+  const translatedKeywordEnd = findNullByte(
+    data,
+    languageEnd + 1,
+    data.length
+  );
+  if (translatedKeywordEnd < 0)
+    throw new Error("The embedded design metadata is invalid.");
+
+  return UTF8_DECODER.decode(data.subarray(translatedKeywordEnd + 1));
+}
+
+function extractDesignFromPng(bytes) {
+  if (!hasPngSignature(bytes)) throw new Error("The PNG file is invalid.");
+
+  let offset = PNG_SIGNATURE.length;
+  while (offset + 12 <= bytes.length) {
+    const length = readUint32(bytes, offset);
+    const dataStart = offset + 8;
+    const dataEnd = dataStart + length;
+    const chunkEnd = dataEnd + 4;
+    if (chunkEnd > bytes.length) throw new Error("The PNG file is invalid.");
+
+    const type = String.fromCharCode(...bytes.subarray(offset + 4, offset + 8));
+    if (type === "iTXt") {
+      const json = readDesignPngChunk(bytes.subarray(dataStart, dataEnd));
+      if (json !== null) return JSON.parse(json);
+    }
+    if (type === "IEND") break;
+    offset = chunkEnd;
+  }
+
+  throw new Error("This PNG does not contain an embedded nameplate design.");
+}
+
+async function readUploadedDesign(file) {
+  const bytes = new Uint8Array(await file.arrayBuffer());
+  const expectsPng = file.type === "image/png" || /\.png$/i.test(file.name);
+  if (hasPngSignature(bytes)) return extractDesignFromPng(bytes);
+  if (expectsPng) throw new Error("The PNG file is invalid.");
+  return JSON.parse(UTF8_DECODER.decode(bytes));
+}
+
 async function uploadDesignFile(file) {
   try {
-    const design = JSON.parse(await file.text());
+    const design = await readUploadedDesign(file);
     const grid = validateUploadedDesign(design);
     applyDesignData(design, grid);
     closeMenu();
