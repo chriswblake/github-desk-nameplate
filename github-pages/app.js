@@ -503,6 +503,10 @@ function setActive(i) {
     s.setAttribute("aria-pressed", String(Number(s.dataset.index) === i));
   });
   save();
+  // If a word is currently stamped on the plate, re-render it in the newly
+  // active color so the preview updates immediately, matching the
+  // size/align controls.
+  if (el.textInput.value) applyText(el.textInput.value);
 }
 
 function toggleCell(r, c, index) {
