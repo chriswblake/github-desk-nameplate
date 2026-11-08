@@ -22,7 +22,7 @@ A GitHub contribution graph themed desk nameplate.
    - Nameplate - vertical part with grid
    - Insert - the colored dots to insert in the grid
    - Stand - horizontal base to keep the nameplate veritical
-1. Open `.3mf` file or load the `.stl` files into your slicing software. No special settings are required, but:
+1. Open `desk-nameplate.3mf` file or load the `.stl` files into your slicing software. No special settings are required, but:
    - The nameplate is face down to get a nicer face finish from the textured plate.
    - The nameplate has adjust bridge flow to avoid supports.
    - The 'pick up tool' has adjust bridge flow and is position near the fan to avoid supports.
