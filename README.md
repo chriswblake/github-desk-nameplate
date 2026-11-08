@@ -25,7 +25,9 @@ A GitHub contribution graph themed desk nameplate.
 1. Open `.3mf` file or load the `.stl` files into your slicing software. No special settings are required, but:
    - The nameplate is face down to get a nicer face finish from the textured plate.
    - The nameplate has adjust bridge flow to avoid supports.
+   - The 'pick up tool' has adjust bridge flow and is position near the fan to avoid supports.
 1. Print the parts.
+   - Tip: Print 'pick up tool' before the small inserts/dots.
    - Tip: Print the inserts in different colors! 🦄
 1. Insert colored dots into the grid to spell your name or decorate!
    > **💡 Tip:** You can use the [nameplate designer](https://chriswblake.github.io/github-desk-nameplate/) web app to try different ideas.
