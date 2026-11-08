@@ -35,6 +35,19 @@ A GitHub contribution graph themed desk nameplate.
 1. Share your design on this repo's [Show and Tell](https://github.com/chriswblake/github-desk-nameplate/discussions/1) page!  
 (and secretly your now even _more_ awesome desk setup)
 
+
+## Containers
+
+There are 3 GitHub themed containers available for storing the inserts/dots.
+
+<img width="450px" alt="screenshot of namplate designer" src="models-containers/containers-preview.jpg" align="center"/>
+
+1. Preview the model files in the `./models-containers/` folder.
+   - Mona
+   - Ducky
+   - Copilot
+1. Open `containers.3mf` file or load the `.stl` files into your slicing software. No special settings are required.
+
 ## Contributing
 
 All files are available, including the original Fusion `.f3d` files. Pull requests are welcome.
